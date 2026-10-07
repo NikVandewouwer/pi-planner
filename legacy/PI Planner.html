@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PI Planner</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#eff3f1;--panel:#fff;--soft:#eaf0ed;--ink:#101c18;--mute:#66766f;--line:#e0e7e3;--accent:#0f7b5f;--accent-ink:#fff;--danger:#c0392b;--a1:#0f7b5f;--a75:#3fa88a;--a5:#8bcdb9;--a25:#d3ebe2;--a0:#eceeed;--shadow:0 1px 2px rgba(16,40,32,.05),0 14px 30px -16px rgba(16,40,32,.2)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c1311;--panel:#141e1a;--soft:#1d2a25;--ink:#e8f1ed;--mute:#8da39a;--line:#25342e;--accent:#4cc3a0;--accent-ink:#06130e;--danger:#f08a7e;--a1:#2fa583;--a75:#25806a;--a5:#1e5f4f;--a25:#18453a;--a0:#212b27;--shadow:0 1px 2px rgba(0,0,0,.3),0 14px 30px -16px rgba(0,0,0,.7)}}
+:root[data-theme="dark"]{--bg:#0c1311;--panel:#141e1a;--soft:#1d2a25;--ink:#e8f1ed;--mute:#8da39a;--line:#25342e;--accent:#4cc3a0;--accent-ink:#06130e;--danger:#f08a7e;--a1:#2fa583;--a75:#25806a;--a5:#1e5f4f;--a25:#18453a;--a0:#212b27;--shadow:0 1px 2px rgba(0,0,0,.3),0 14px 30px -16px rgba(0,0,0,.7)}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;line-height:1.15;font-weight:800;letter-spacing:-.02em}
+h1{font-size:clamp(1.8rem,5vw,2.6rem)}h2{font-size:1.35rem}h3{font-size:1.02rem}
+p{margin:.4rem 0}.mute{color:var(--mute)}
+.wrap{max-width:1120px;margin:0 auto;padding:18px 16px 70px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;margin:14px 0;box-shadow:var(--shadow)}
+input,select,button{font:inherit;color:inherit}
+input,select{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-width:0;transition:border-color .15s,box-shadow .15s}
+input:hover,select:hover{border-color:var(--mute)}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent);border-color:var(--accent)}
+select option{background:var(--panel);color:var(--ink)}
+button{cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 14px;transition:background .15s,transform .05s}
+button:hover:not(:disabled){background:var(--soft)}button:active:not(:disabled){transform:scale(.98)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button.primary:hover:not(:disabled){background:var(--accent);filter:brightness(1.08)}
+button.ghost{border-color:transparent;background:none;color:var(--mute);padding:6px 10px}
+.nav button.ghost.icon:hover:not(:disabled){background:var(--soft);color:var(--ink)}
+.nav button.ghost.icon.danger:hover:not(:disabled){background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)}
+button.danger{color:var(--danger)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}.row>input{flex:1 1 160px}.grow{flex:1}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:.85rem;color:var(--mute)}
+.steps{display:flex;gap:6px;margin:18px 0}.steps span{flex:1;height:6px;border-radius:3px;background:var(--line)}.steps span.on{background:var(--accent)}
+.member{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 0;border-top:1px solid var(--line)}.member input{flex:1 1 140px}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.scrim{z-index:20}
+select.title{font:800 clamp(1.7rem,4.5vw,2.5rem)/1.1 "Plus Jakarta Sans",system-ui,sans-serif;letter-spacing:-.02em;background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2366766f' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M3 6l5 5 5-5'/%3E%3C/svg%3E") no-repeat right center;border:0;padding:0 26px 0 0;appearance:none;-webkit-appearance:none;cursor:pointer;max-width:100%;box-shadow:none}
+.ctx{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.pill{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 6px 3px 14px;box-shadow:var(--shadow);font-size:.85rem;color:var(--mute)}
+.pill select{border:0;background:transparent;font-weight:600;color:var(--ink);padding:6px 4px;box-shadow:none}
+.pill.team{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.pill.team select{color:var(--accent-ink)}
+.tabs{display:inline-flex;gap:2px;background:var(--soft);padding:4px;border-radius:12px;overflow-x:auto;max-width:100%}
+.tabs button{border:0;background:none;border-radius:9px;padding:7px 14px;color:var(--mute);white-space:nowrap}
+.tabs button.on{background:var(--panel);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.scroll{overflow-x:auto;max-width:100%}
+table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:10px 6px;border-top:1px solid var(--line);font-weight:400}th{font-weight:600;border-top:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:12px 0 18px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px 18px;box-shadow:var(--shadow);font-size:.85rem}
+.kpi .num{font-size:2rem;font-weight:800;letter-spacing:-.03em;line-height:1.15;margin-top:2px}
+.kpi.big{background:var(--soft)}
+.bar{height:8px;background:var(--a0);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--tone,var(--accent));border-radius:4px}
+.kt{font-weight:700;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.barrow{display:flex;align-items:center;gap:10px;margin-top:10px}.barrow .bar{flex:1}.barrow b{font-size:.8rem;min-width:36px;text-align:right}
+.spark{display:flex;gap:4px;align-items:flex-end;height:78px;margin-top:14px}
+.sc{flex:1 1 0;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;gap:4px;text-align:center}
+.sc i{display:block;background:var(--tone);border-radius:6px}.sc .pc{font-size:.56rem;font-weight:700;letter-spacing:-.05em;line-height:1;white-space:nowrap;color:var(--ink)}
+.sc span{font-size:.6rem;color:var(--mute);line-height:1}
+.t-none{--tone:color-mix(in srgb,var(--mute) 45%,transparent)}
+.t-good{--tone:var(--good)}.t-warn{--tone:var(--warn)}.t-bad{--tone:var(--bad)}
+:root{--good:#1f9d6b;--warn:#e8912d;--bad:#d9483b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--good:#2fb882;--warn:#e29a3d;--bad:#e5645a}}
+:root[data-theme="dark"]{--good:#2fb882;--warn:#e29a3d;--bad:#e5645a}
+.trow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+button.icon{padding:8px;display:grid;place-items:center;color:var(--mute)}button.icon:hover:not(:disabled){color:var(--ink)}
+.info{position:relative;display:inline-grid;vertical-align:middle;margin-left:4px;color:var(--mute);cursor:help;outline:none;border-radius:50%}
+.info:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+.tip{display:none;position:absolute;left:-6px;top:calc(100% + 8px);width:250px;background:var(--ink);color:var(--bg);font-size:.78rem;font-weight:400;letter-spacing:0;line-height:1.4;padding:9px 12px;border-radius:10px;z-index:5;box-shadow:var(--shadow)}
+.info:hover .tip,.info:focus .tip{display:block}
+.grid td,.grid th{vertical-align:middle}
+.nmi{display:flex;align-items:center;gap:9px}.nmt{flex:1;min-width:0;line-height:1.25;overflow-wrap:anywhere}.nmt small{white-space:nowrap}
+table.ltab .nmt{font-weight:600}table.ltab .nmt small{display:block;color:var(--mute);font-size:.72rem;font-weight:400;line-height:1.15}
+.empty{padding:22px;border:1.5px dashed var(--line);border-radius:14px;color:var(--mute);text-align:center}
+.v1{background:var(--a1);color:#fff}.v75{background:var(--a75);color:#fff}.v5{background:var(--a5);color:var(--ink)}.v25{background:var(--a25);color:var(--ink)}.v0{background:var(--a0);color:var(--mute)}
+.grid{border-collapse:separate;border-spacing:0;font-size:.8rem}
+.grid td,.grid th{padding:1px 1.5px;text-align:center;font-weight:400;border-top:0}
+.grid .sticky{position:sticky;left:0;background:var(--panel);z-index:1;text-align:left;min-width:250px;max-width:250px;padding:4px 10px 4px 0}
+.grid .sp{font-weight:600;text-align:left;padding:6px 4px 6px 8px;color:var(--accent)}
+.grid .dh{color:var(--mute);font-size:.66rem;line-height:1.2;min-width:30px;padding-bottom:4px}
+.grid .sb{padding-left:9px}
+.grid .tnm{font-weight:700;padding-top:14px}
+.c{width:28px;height:28px;padding:0;border-radius:8px;font-size:.68rem;font-weight:600;border:0}
+.c:hover:not(:disabled){filter:brightness(1.12);transform:scale(1.08)}
+.cl{background:repeating-linear-gradient(135deg,var(--line) 0 2px,transparent 2px 6px);cursor:not-allowed}
+.av{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--soft);font-weight:700;font-size:.78rem}
+.grid .nm b{flex:none;display:grid;place-items:center;height:28px;min-width:42px;padding:0 8px;font-weight:600;font-size:.74rem;background:var(--soft);border-radius:8px}.grid .nm small{display:block;color:var(--mute);font-size:.72rem;line-height:1.15}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}.cards .panel{margin:0}
+.scrim{position:fixed;inset:0;background:rgba(8,16,13,.55);backdrop-filter:blur(3px);overflow:auto;z-index:10;display:flex;justify-content:center;align-items:flex-start;padding:max(20px,env(safe-area-inset-top,0px)) 12px}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:22px;width:min(560px,100%);margin-top:5vh;box-shadow:0 30px 80px -20px rgba(0,0,0,.45)}
+.modal .panel{box-shadow:none;border-radius:14px}
+.head{align-items:center}
+table:not(.grid) tr:first-child>td{border-top:0}
+.cards .head{margin-bottom:8px}
+.mlist{display:grid;gap:8px;margin:14px 0 10px}.mlist p{margin:0}
+.sub{font-size:.8rem;font-weight:600;color:var(--mute);margin-top:16px}
+@media (max-width:520px){.g3{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.g3>button{grid-column:1/-1}}
+select.pisel{font:600 1.05rem/1.3 "Plus Jakarta Sans",system-ui,sans-serif;color:var(--mute);background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%2366766f' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M2 5l5 5 5-5'/%3E%3C/svg%3E") no-repeat right center;border:0;padding:0 22px 0 0;appearance:none;-webkit-appearance:none;cursor:pointer;box-shadow:none}
+select.pisel:hover{color:var(--ink)}
+:root{color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark}}
+:root[data-theme="dark"]{color-scheme:dark}
+.top{align-items:flex-start}
+.trow,.ctx{min-height:clamp(1.87rem,4.95vw,2.75rem)}
+.ctx{align-items:center}
+.trow h1{font-size:clamp(1.7rem,4.5vw,2.5rem);line-height:1.1}
+
+.mscrim{position:fixed;inset:0;z-index:9}
+.menu{position:absolute;left:0;top:calc(100% + 8px);z-index:10;min-width:250px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 50px -12px rgba(0,0,0,.35);padding:6px}
+
+
+
+.mrow .mi{flex:1;min-width:0}.mrow .icon{padding:7px;flex:none}
+.modal.wide{width:min(880px,100%)}
+@media (max-width:520px){.g3{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 36px}.g3>button{grid-column:auto}}
+.kpi[data-act]{cursor:pointer;transition:transform .12s,box-shadow .12s}.kpi[data-act]:hover{transform:translateY(-2px)}
+.kpi[data-act]:focus-visible{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:16px 0 6px}
+.tile{background:var(--soft);border-radius:14px;padding:12px 14px;font-size:.85rem}.tile .num{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;line-height:1.25}
+.rs{display:grid;grid-template-columns:minmax(110px,180px) 1fr 84px;gap:14px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.rs .barrow{margin:0}.rs small{font-size:.75rem}
+.modal{position:relative}
+.xclose{position:absolute;top:14px;right:14px}
+.rhead{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding-right:40px}
+.chips2{display:flex;flex-wrap:wrap;gap:6px}
+.mchip{display:inline-flex;align-items:center;gap:6px;background:var(--soft);border-radius:999px;padding:3px 11px 3px 3px;font-size:.82rem;font-weight:600}
+.mav,.rb{display:grid;place-items:center;border-radius:50%;background:var(--panel);font-weight:700;color:var(--accent)}
+.mav{width:24px;height:24px;font-size:.7rem}
+.tile .tsub{font-size:.72rem;line-height:1.3;margin-top:2px}
+.rlist{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-top:8px}
+.rc{background:var(--soft);border-radius:16px;padding:14px;display:grid;grid-template-columns:38px minmax(0,1fr) auto;column-gap:12px;row-gap:10px;align-items:center}
+.rb{width:38px;height:38px;font-size:.8rem}
+.rt b{display:block;font-size:.92rem;line-height:1.25}.rt small{display:block;color:var(--mute);font-size:.75rem}
+.rn{text-align:right}.rn b{display:block;font-size:1.15rem;line-height:1.2;color:var(--tone)}.rn small{display:block;color:var(--mute);font-size:.72rem}
+.rbar{grid-column:1/-1}.rc .bar{height:8px;background:var(--panel)}
+.rc.nb{grid-template-columns:minmax(0,1fr) auto}
+.mav.big{width:40px;height:40px;font-size:.9rem;background:var(--soft)}
+.mchip.plain{padding:3px 11px}
+.tgroup{margin-top:12px}.tgroup .inner{margin:8px 0 0 14px;padding-left:14px;border-left:2px solid var(--line)}
+button.av{border:0;padding:0;cursor:pointer;color:var(--ink)}button.av:hover{background:var(--accent);color:var(--accent-ink)}
+
+.menu{min-width:270px}
+.sw{position:relative;display:inline-block;width:42px;height:24px}
+.sw input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;padding:0}
+.sw .knob{position:absolute;inset:0;background:var(--line);border-radius:999px;transition:background .15s;pointer-events:none}
+.sw .knob::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.sw input:checked+.knob{background:var(--accent)}.sw input:checked+.knob::after{left:21px}
+.sw input:focus-visible+.knob{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+.tag{background:var(--soft);color:var(--accent);border-radius:999px;padding:2px 9px;font-size:.72rem;font-weight:600;white-space:nowrap}
+.tabs.full{display:flex;width:100%;margin:0 0 18px}.tabs.full button{flex:1;padding:10px 14px}
+.typerow{display:grid;grid-template-columns:minmax(0,1fr) 40px;gap:10px;align-items:center;margin:8px 0}.typerow>input{width:100%}
+
+
+
+.sub.first{margin-top:4px}
+.fbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:6px 0 14px}
+.fsw{display:inline-flex;align-items:center;gap:8px;font-size:.85rem;color:var(--mute);cursor:pointer}
+.brush{display:flex;align-items:center;gap:6px;background:var(--soft);padding:5px 8px 5px 12px;border-radius:14px;font-size:.78rem}
+.sw0{width:34px;height:30px;padding:0;border:2px solid transparent;border-radius:9px;font-weight:600;font-size:.74rem;display:grid;place-items:center;background:var(--panel);color:var(--mute)}
+.sw0.on{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--panel)}
+button.v1:hover:not(:disabled){background:var(--a1)}button.v75:hover:not(:disabled){background:var(--a75)}button.v5:hover:not(:disabled){background:var(--a5)}button.v25:hover:not(:disabled){background:var(--a25)}button.v0:hover:not(:disabled){background:var(--a0)}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin:12px 0 4px}
+.chart{background:var(--soft);border-radius:16px;padding:14px}.chart h4{margin:0 0 6px;font-size:.9rem}
+.chart svg{width:100%;height:auto;display:block}.chart text{fill:var(--mute);font:11px "Plus Jakarta Sans",system-ui,sans-serif}.chart .val{fill:var(--ink);font-weight:700}
+.chart 
+.chart .gl{stroke:var(--line);stroke-width:1}.chart .mk{stroke:var(--warn);stroke-width:2;stroke-dasharray:5 4}
+.tsec{margin:18px 0 28px}
+.mcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:12px}
+.mcard{display:flex;flex-direction:column;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+.mtop{display:flex;align-items:center;gap:12px;min-width:0}.mtop .mav{flex:none;width:44px;height:44px;font-size:1rem;background:var(--soft)}
+.mtop b{display:block;line-height:1.25;overflow-wrap:anywhere}.mtop small{display:block;color:var(--mute);font-size:.8rem}
+.tag.off{background:var(--soft);color:var(--mute)}.mcard .tag{align-self:flex-start}
+.step{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:.78rem;margin-right:8px;vertical-align:middle}
+.tag.warn{color:var(--warn)}.tag.bad{color:var(--bad)}
+.bignum{font-size:2.4rem;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.ff{display:grid;gap:12px}.ff2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ff input:not([type=checkbox]),.ff select{width:100%}
+.sorth{border:0;background:none;padding:2px 4px;margin:0 0 0 -4px;font:inherit;font-weight:600;color:inherit;display:inline-flex;gap:5px;align-items:center;border-radius:6px}
+.sorth:hover{background:var(--soft)}.sorth .arr{font-size:.65rem;color:var(--mute);opacity:.45}.sorth.on .arr{opacity:1;color:var(--accent)}
+.tghead{margin:18px 0 6px;font-weight:700;font-size:.95rem}.tghead:first-of-type{margin-top:10px}
+.pisw .pil{font-size:.7rem;font-weight:800;letter-spacing:.08em}.pisw 
+select.pisel2{font:700 1.05rem/1.3 "Plus Jakarta Sans",system-ui,sans-serif;color:inherit;background:transparent;border:0;padding:7px 4px;appearance:none;-webkit-appearance:none;cursor:pointer;box-shadow:none;max-width:260px}
+.nob>div{border-top:0!important;margin-top:0!important;padding-top:0!important}
+.pistack{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.pistack b{font-size:1.02rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.pistack small{font-size:.7rem;font-weight:600;opacity:.85;white-space:nowrap}
+.pisw select.pisel2{position:absolute;inset:0;width:100%;height:100%;opacity:0;padding:0;max-width:none;font-size:16px}
+.pisw:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+.tip{max-width:min(250px,calc(100vw - 56px))}
+.charts{grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))}
+.rlist{grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))}
+.cards{grid-template-columns:repeat(auto-fill,minmax(min(270px,100%),1fr))}
+.kpis{grid-template-columns:repeat(auto-fill,minmax(min(200px,100%),1fr))}
+html,body{overflow-x:hidden}
+@media (max-width:900px){
+  .wrap{padding:16px 12px 60px}
+  .ff3{grid-template-columns:1fr 1fr}
+}
+@media (max-width:640px){
+  input,select{font-size:16px}
+  .wrap{padding:12px 10px 56px}
+  .panel{padding:14px;border-radius:16px}
+  .top{flex-direction:column;align-items:stretch;gap:12px;margin-bottom:14px}
+  .ctx{width:100%}.ctx .pill{flex:1}.ctx .pill select{flex:1;min-width:0}
+  .pibl{display:none}.pib{padding:9px}
+  .pistack b{max-width:46vw}
+  .tabs.full button{padding:10px 8px}
+  .head{align-items:flex-start}
+  .head>.tabs,.head>.brush{max-width:100%}
+  .fbar .pill{flex:1 1 140px}.fbar .pill select{flex:1;min-width:0}
+  .grid .sticky{min-width:150px;max-width:150px;padding-right:6px}
+  .nmi{gap:6px}.av{width:26px;height:26px;font-size:.7rem}.grid .nm b{min-width:34px;padding:0 6px}
+  .nmt small{white-space:normal}
+  .kpi .num{font-size:1.6rem}
+  .scrim{align-items:flex-end;padding:0}
+  .modal,.modal.wide{width:100%;margin:0;border-radius:20px 20px 0 0;max-height:92vh;overflow:auto;padding:18px 14px calc(18px + env(safe-area-inset-bottom,0px))}
+  .ff2,.ff3{grid-template-columns:1fr}
+  .rc{padding:12px}.rn b{font-size:1rem}
+  .tiles{grid-template-columns:1fr 1fr}
+  .bignum{font-size:1.9rem}
+  .menu{min-width:min(270px,calc(100vw - 24px))}
+  .vin{width:84px}
+  .step{width:22px;height:22px}
+}
+@media (max-width:380px){.tiles{grid-template-columns:1fr}}
+.chart .s0{fill:var(--mute);opacity:.7}.chart .s1{fill:var(--accent)}.chart .s2{fill:var(--blue)}.chart .val.sm{font-size:8.5px}
+:root{--blue:#3b6fd9}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--blue:#6f9cf5}}
+:root[data-theme="dark"]{--blue:#6f9cf5}
+.unit{font-size:.8rem;font-weight:600;color:var(--mute);letter-spacing:0}
+.fsec{font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);padding-bottom:6px;border-bottom:1px solid var(--line)}
+.hero{background:var(--soft);border-radius:18px;padding:18px;margin-top:16px}
+.hero .num{font-size:2.1rem;font-weight:800;letter-spacing:-.03em;line-height:1.15;margin-top:2px}
+@media (max-width:640px){.hero{padding:14px}.hero .num{font-size:1.7rem}}
+.mcard{position:relative;border-left:4px solid var(--line);gap:10px}
+.mcard.in{border-left-color:var(--good);background:color-mix(in srgb,var(--good) 8%,var(--panel))}
+.mcard.out{border-left-color:var(--bad);background:color-mix(in srgb,var(--bad) 7%,var(--panel))}
+.mcard .pbadge{position:absolute;top:12px;right:12px;font-size:.68rem;font-weight:700;letter-spacing:.02em;padding:3px 9px;border-radius:999px;background:var(--soft);color:var(--mute)}
+.mcard .mtop{padding-right:74px}
+.mcard .tag{background:transparent;padding:0;font-size:.76rem}
+.mcard.in .tag{color:var(--good)}.mcard.out .tag{color:var(--bad)}
+.vchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.vchip{display:inline-flex;gap:6px;align-items:baseline;background:var(--soft);border-radius:999px;padding:3px 11px;font-size:.78rem}
+.vchip b{font-weight:700}
+.secrow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.acts{display:flex;gap:6px;flex-wrap:nowrap}
+.acts button,button.acts-b{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;font-size:.85rem}
+.help{margin:0 0 14px;color:var(--mute);font-size:.88rem;line-height:1.55;max-width:70ch}
+.help li{margin:3px 0}.help ul{margin:6px 0 0;padding-left:18px}
+.mcards{grid-template-columns:repeat(auto-fill,minmax(min(250px,100%),1fr))}
+.mcard{justify-content:space-between;min-height:118px}
+.mcard .mtop{align-items:flex-start;padding-right:0}
+.mcard .mtop>div{min-width:0;flex:1}
+.mcard .mtop b{overflow-wrap:anywhere}
+.mcard .mtop small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.mcard .pbadge{position:static;flex:none;align-self:flex-start;max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note{display:flex;gap:8px;align-items:flex-start;margin-top:12px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--warn) 12%,transparent);color:var(--ink);font-size:.85rem}
+.note b{color:var(--warn)}
+.wsec{margin:18px 0 0}
+.rowacts{display:flex;gap:2px;justify-content:flex-end}.rowacts button{padding:7px}
+.spc{display:inline-flex;align-items:center;gap:7px;background:var(--soft);border-radius:999px;padding:3px 10px;font-size:.82rem;line-height:1.2;white-space:nowrap}
+.spc .pv{font-weight:700}
+.spc .dv{color:var(--mute);font-weight:600}
+.spc.done{background:color-mix(in srgb,var(--good) 14%,transparent)}
+.spc.over{background:color-mix(in srgb,var(--bad) 13%,transparent)}
+.spc.over .dv{color:var(--bad)}
+.spc.done .dv{color:var(--good)}
+.spc.part .dv{color:var(--tone)}
+.spc.zero{background:transparent;color:var(--mute);padding-left:0;padding-right:0}
+.spc .mini{width:30px;height:5px;border-radius:3px;background:color-mix(in srgb,var(--mute) 22%,transparent);overflow:hidden;flex:none}
+.spc .mini i{display:block;height:100%;border-radius:3px;background:var(--tone,var(--mute))}
+.spc.t-none{--tone:color-mix(in srgb,var(--mute) 55%,transparent)}
+table.vt td,table.vt th{vertical-align:middle}
+.spc,.tag{vertical-align:middle}
+.spc{min-height:24px;padding:4px 10px;box-sizing:border-box}
+.tag{display:inline-flex;align-items:center;min-height:24px;box-sizing:border-box}
+.mcard .tag{min-height:0}
+table.fx{table-layout:fixed}
+table.fx th,table.fx td{overflow:hidden;text-overflow:ellipsis}
+table.fx.ftab{min-width:910px}
+table.fx.ptab{min-width:620px}
+table.fx.vtab{min-width:420px}
+.chart .avgl{fill:none;stroke:currentColor;stroke-width:2;stroke-dasharray:5 4;opacity:.85}
+.chart .s0.avgl{stroke:var(--mute)}.chart .s1.avgl{stroke:var(--accent)}.chart .s2.avgl{stroke:var(--blue)}
+.chart .mutel{fill:var(--mute);font-size:10px}
+.chart .avgt{font-size:9.5px;font-weight:700}
+.chart .s0.avgt{fill:var(--mute)}.chart .s1.avgt{fill:var(--accent)}.chart .s2.avgt{fill:var(--blue)}
+.chart svg{max-height:230px}
+/* app canvas */
+body{background:var(--bg);min-height:100vh}
+body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(1200px 560px at 8% -12%, color-mix(in srgb,var(--accent) 22%, transparent), transparent 62%),
+    radial-gradient(1000px 520px at 100% -6%, color-mix(in srgb,var(--blue) 16%, transparent), transparent 58%),
+    radial-gradient(900px 700px at 50% 110%, color-mix(in srgb,var(--accent) 12%, transparent), transparent 60%);}
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+  background-image:radial-gradient(color-mix(in srgb,var(--ink) 18%, transparent) 1px, transparent 1px);
+  background-size:26px 26px;
+  -webkit-mask-image:radial-gradient(1000px 700px at 50% 0%, #000, transparent 75%);
+  mask-image:radial-gradient(1000px 700px at 50% 0%, #000, transparent 75%);}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) body::before{opacity:.55}:root:not([data-theme="light"]) body::after{opacity:.35}}
+:root[data-theme="dark"] body::before{opacity:.55}:root[data-theme="dark"] body::after{opacity:.35}
+.panel,.kpi,.mcard,.modal,.pibar,.pill{backdrop-filter:saturate(1.1)}
+.panel,.kpi,.mcard{border-color:color-mix(in srgb,var(--line) 75%, transparent)}
+.appbar{position:sticky;top:0;z-index:8;background:color-mix(in srgb,var(--panel) 86%,transparent);backdrop-filter:blur(10px) saturate(1.2);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+.appbar .in{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:-.02em;font-size:1rem}
+.logo{width:28px;height:28px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:.8rem;font-weight:800;flex:none}
+.brand small{display:block;font-size:.8rem;font-weight:700;color:var(--mute);line-height:1.2;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.appbar .sp{flex:1}
+.appbar @media (max-width:640px){.appbar .in{padding:8px 10px}.brand small{display:none}.appbar .who{display:none}}
+.appbar .in{flex-wrap:nowrap;row-gap:8px}
+.appbar .in>.icon:first-child{margin-left:-4px}
+.appbar .ctxrow{display:flex;align-items:center;gap:10px;flex:0 0 auto;min-width:0}
+.appbar .pill{flex:none;width:auto}
+.appbar .pill select,.appbar .pisel2{width:auto}
+.appbar .sp{min-width:12px}
+.hctx{display:flex;align-items:center;gap:10px;min-width:0}
+.artm{display:none;font-weight:800;letter-spacing:-.02em;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:26vw}
+@media (max-width:640px){.artm{display:block}}
+.hpi{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.hpi b{font-size:.92rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.hpi small{font-size:.72rem;color:var(--mute);white-space:nowrap}
+@media (max-width:640px){.hpi b{max-width:30vw}}
+.hsep{width:1px;height:24px;background:var(--line);flex:none}
+.appbar .pill{box-shadow:none}
+.appbar .pistack b{font-size:.92rem;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appbar .pistack small{font-size:.66rem}
+@media (max-width:640px){
+  .appbar .in{padding:8px 10px;gap:8px;flex-wrap:wrap}
+  .brand>span:not(.logo){font-size:.9rem}
+  .brand small{max-width:26vw}
+  .appbar .ctxrow{order:3;width:100%;flex:1 1 100%;flex-wrap:wrap}
+  .appbar .hsep{display:none}
+  .appbar .pistack b{max-width:34vw}
+}
+.pibtn{display:flex;align-items:center;gap:8px;background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:5px 10px 5px 12px;cursor:pointer}
+.pibtn:hover{filter:brightness(1.07)}
+.pibtn .pil{font-size:.66rem;font-weight:800;letter-spacing:.08em;opacity:.85}
+.pibtn .pistack{align-items:flex-start}
+.pilist{display:grid;gap:8px;margin-top:4px}
+.pirow{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--panel)}
+.pirow.cur{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--panel))}
+.pirow .pick{flex:1;min-width:0;text-align:left;border:0;background:none;padding:0;cursor:pointer}
+.pirow .pick b{display:block;line-height:1.25}
+.pirow .pick small{display:block;color:var(--mute);font-size:.78rem}
+.pirow .tag{flex:none}
+.nav{position:fixed;inset:0 auto 0 0;z-index:21;width:min(340px,92vw);background:var(--panel);border-right:1px solid var(--line);box-shadow:0 0 60px rgba(0,0,0,.25);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+.nav .nhd{position:relative;padding:0}
+.nav .nbody{overflow:auto;padding:0 10px 16px;flex:1}
+.nav .nft{border-top:1px solid var(--line);padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));font-size:.76rem;color:var(--mute)}
+.thsw{display:flex;gap:4px;background:var(--soft);border-radius:12px;padding:4px;flex:1}
+.thsw button{flex:1;border:0;background:none;border-radius:9px;padding:9px 0;display:grid;place-items:center;color:var(--mute)}
+.thsw button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.nsec{font-size:.7rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);margin:14px 10px 6px}
+.ngrp{margin:0 0 6px}
+.nart{display:flex;align-items:center;gap:2px;padding:6px 4px 6px 10px;border-radius:10px}
+.nart .nm{flex:1;min-width:0;font:700 .95rem/1.3 inherit;color:var(--ink);padding:5px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ngrp.cur .nart .nm{color:var(--accent)}
+.nart .icon{padding:6px}
+.npis{margin:2px 0 8px 12px;border:1px solid var(--line);border-radius:12px;overflow:hidden;isolation:isolate}
+.npi{display:flex;align-items:center;gap:2px;padding:1px 4px 1px 10px;border-top:1px solid var(--line)}
+.npi:first-child{border-top:0}
+.npi.on{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.npi.on:hover{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.npi .nm{flex:1;min-width:0;text-align:left;border:0;background:none;cursor:pointer;padding:7px 0;font-size:.88rem;color:inherit}
+.npi .nm b{font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.npi .nm small{display:block;color:var(--mute);font-size:.72rem}
+.npi.on .nm b{font-weight:800}
+.npi.on .nm small{color:color-mix(in srgb,var(--ink) 55%,transparent)}
+.nadd{width:100%;justify-content:flex-start;border:0;border-radius:0;background:none;color:var(--mute);font-weight:600;padding:9px 10px;text-align:left;font-size:.85rem;border-top:1px solid var(--line)}
+.nadd.art{border:0;border-radius:10px}
+.nadd:hover{color:var(--accent)}
+.nadd.art{margin-top:6px;font-size:.9rem;margin-left:0}
+.nempty{color:var(--mute);font-size:.84rem;padding:6px 8px}
+.npi:hover,.nadd:hover{background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.npi.on{background:color-mix(in srgb,var(--accent) 20%,transparent)}
+.npi.on:hover{background:color-mix(in srgb,var(--accent) 26%,transparent)}
+.npi.on .nm small{color:color-mix(in srgb,var(--ink) 60%,transparent)}
+.nav button.ghost.icon:hover:not(:disabled){background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.nav{--nhov:color-mix(in srgb,var(--accent) 10%,transparent)}
+.nav .npi:hover,.nav .nadd:hover:not(:disabled){background:var(--nhov)}
+.nav .npi.on{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.nav .npi.on:hover{background:color-mix(in srgb,var(--accent) 30%,transparent)}
+/* ---------- colour palettes ---------- */
+:root{--seed:#0f7b5f;--seed-dark:#4cc3a0;--seed2:#3b6fd9;--seed2-dark:#6f9cf5}
+:root[data-palette="ocean"]{--seed:#11639e;--seed-dark:#5ab4ec;--seed2:#7a4bd0;--seed2-dark:#a98bf0}
+:root[data-palette="violet"]{--seed:#6b45c6;--seed-dark:#a98bf0;--seed2:#16876b;--seed2-dark:#49c3a2}
+:root[data-palette="amber"]{--seed:#a8651a;--seed-dark:#e8a64f;--seed2:#2f7ec4;--seed2-dark:#7bb6ee}
+:root[data-palette="rose"]{--seed:#b43a62;--seed-dark:#ef88ab;--seed2:#3b7fb6;--seed2-dark:#86b9e4}
+:root[data-palette="slate"]{--seed:#3f5365;--seed-dark:#9db6cb;--seed2:#2e7f73;--seed2-dark:#64bfae}
+:root{
+  --accent:var(--seed);--accent-ink:#fff;--blue:var(--seed2);
+  --bg:color-mix(in srgb,var(--seed) 6%,#f2f4f4);
+  --panel:#fff;
+  --soft:color-mix(in srgb,var(--seed) 10%,#fff);
+  --line:color-mix(in srgb,var(--seed) 13%,#e3e7e6);
+  --ink:color-mix(in srgb,var(--seed) 20%,#0d1312);
+  --mute:color-mix(in srgb,var(--seed) 16%,#6a7373);
+  --a1:var(--seed);
+  --a75:color-mix(in srgb,var(--seed) 72%,#fff);
+  --a5:color-mix(in srgb,var(--seed) 42%,#fff);
+  --a25:color-mix(in srgb,var(--seed) 17%,#fff);
+  --a0:color-mix(in srgb,var(--seed) 5%,#edefef);
+  --good:#1f9d6b;--warn:#e8912d;--bad:#d9483b;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --accent:var(--seed-dark);--accent-ink:#071210;--blue:var(--seed2-dark);
+  --bg:color-mix(in srgb,var(--seed-dark) 5%,#0b0f0f);
+  --panel:color-mix(in srgb,var(--seed-dark) 7%,#141a19);
+  --soft:color-mix(in srgb,var(--seed-dark) 12%,#1b2322);
+  --line:color-mix(in srgb,var(--seed-dark) 14%,#263030);
+  --ink:color-mix(in srgb,var(--seed-dark) 12%,#eef3f2);
+  --mute:color-mix(in srgb,var(--seed-dark) 18%,#8c9a98);
+  --a1:color-mix(in srgb,var(--seed-dark) 78%,#000);
+  --a75:color-mix(in srgb,var(--seed-dark) 58%,#000);
+  --a5:color-mix(in srgb,var(--seed-dark) 40%,#000);
+  --a25:color-mix(in srgb,var(--seed-dark) 26%,#000);
+  --a0:color-mix(in srgb,var(--seed-dark) 8%,#202928);
+  --good:#2fb882;--warn:#e29a3d;--bad:#e5645a;--danger:#f08a7e;
+}}
+:root[data-theme="dark"]{
+  --accent:var(--seed-dark);--accent-ink:#071210;--blue:var(--seed2-dark);
+  --bg:color-mix(in srgb,var(--seed-dark) 5%,#0b0f0f);
+  --panel:color-mix(in srgb,var(--seed-dark) 7%,#141a19);
+  --soft:color-mix(in srgb,var(--seed-dark) 12%,#1b2322);
+  --line:color-mix(in srgb,var(--seed-dark) 14%,#263030);
+  --ink:color-mix(in srgb,var(--seed-dark) 12%,#eef3f2);
+  --mute:color-mix(in srgb,var(--seed-dark) 18%,#8c9a98);
+  --a1:color-mix(in srgb,var(--seed-dark) 78%,#000);
+  --a75:color-mix(in srgb,var(--seed-dark) 58%,#000);
+  --a5:color-mix(in srgb,var(--seed-dark) 40%,#000);
+  --a25:color-mix(in srgb,var(--seed-dark) 26%,#000);
+  --a0:color-mix(in srgb,var(--seed-dark) 8%,#202928);
+  --good:#2fb882;--warn:#e29a3d;--bad:#e5645a;--danger:#f08a7e;
+}
+.pal{display:flex;gap:8px;flex-wrap:wrap;padding:2px 4px 2px}
+.pal button{width:30px;height:30px;padding:0;border-radius:50%;border:2px solid transparent;background:var(--sw);box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.pal button:hover{transform:scale(1.08)}
+.pal button.on{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--panel)}
+.nbrand{display:flex;align-items:center;gap:12px;padding:16px 14px 12px}
+.nbrand .mark{width:42px;height:42px;flex:none;border-radius:13px;box-shadow:0 6px 18px -8px var(--accent)}
+.nbrand h2{font-size:1.2rem;letter-spacing:-.03em;line-height:1.1}
+.nbrand p{margin:3px 0 0;font-size:.78rem;color:var(--mute);line-height:1.25}
+.nhd{border-bottom:1px solid var(--line)}
+.nftr{border-top:1px solid var(--line);padding:12px 12px calc(10px + env(safe-area-inset-bottom,0px))}
+.nftr .nsec{margin:2px 2px 6px}
+.brandmark{width:28px;height:28px;flex:none;border-radius:9px}
+.typerow{display:grid;grid-template-columns:minmax(0,1fr) 40px;gap:10px;align-items:center;margin:8px 0}
+.typerow>input{width:100%}
+.typerow>button{width:40px;height:40px;padding:0;display:grid;place-items:center}
+.typerow>button:hover:not(:disabled){color:var(--danger)}
+.mcard .macts{display:flex;gap:2px;margin-left:auto}
+.mcard .macts button{padding:6px}
+.mcard .macts button:hover:not(:disabled){background:var(--panel);color:var(--ink)}
+.mcard .macts button.danger:hover:not(:disabled){color:var(--danger)}
+.mcard.add{align-items:center;justify-content:center;border:1.5px dashed var(--line);background:none;box-shadow:none;min-height:118px;color:var(--mute);font-weight:600;cursor:pointer}
+.mcard.add:hover{border-color:var(--accent);color:var(--accent)}
+.napp{display:block}
+.savs{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.sav{display:inline-flex;align-items:center;gap:7px;background:var(--soft);border-radius:999px;padding:3px 12px 3px 3px;font-size:.84rem;font-weight:600}
+.sav .mav{width:26px;height:26px;font-size:.72rem;background:var(--panel)}
+.sav small{color:var(--mute);font-weight:500;font-size:.76rem}
+.sav.in{background:color-mix(in srgb,var(--good) 12%,transparent)}
+.sav.out{background:color-mix(in srgb,var(--bad) 10%,transparent)}
+.schips{display:flex;gap:6px;flex-wrap:wrap}
+.stm{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}
+.stm:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.stm h4{margin:0 0 2px;font-size:.95rem}
+.sav{align-items:center;padding:4px 14px 4px 4px}
+.sav .tx{display:flex;flex-direction:column;line-height:1.2}
+.sav small{font-weight:500}
+.rcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:12px}
+.rcard{position:relative;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:16px;padding:12px 12px 10px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;min-height:92px;justify-content:space-between}
+.rcard.in{border-left-color:var(--good);background:color-mix(in srgb,var(--good) 8%,var(--panel))}
+.rcard.out{border-left-color:var(--bad);background:color-mix(in srgb,var(--bad) 7%,var(--panel))}
+.rcard .rt{display:flex;align-items:flex-start;gap:6px}
+.rcard .rt .tx{flex:1;min-width:0;line-height:1.25}
+.rcard .rt b{display:block;font-size:.92rem;overflow-wrap:anywhere}
+.rcard .rt small{display:block;color:var(--mute);font-size:.74rem}
+.rcard .tag{background:transparent;padding:0;font-size:.76rem;align-self:flex-start}
+.rcard.in .tag{color:var(--good)}.rcard.out .tag{color:var(--bad)}
+.rcard .macts{display:flex;gap:2px;margin-left:auto}
+.rcard .macts button{padding:6px}
+.rcard .macts button:hover:not(:disabled){background:var(--panel)}
+.rcard .macts button.danger:hover:not(:disabled){color:var(--danger)}
+.rcard.add{align-items:center;justify-content:center;border:1.5px dashed var(--line);background:none;box-shadow:none;color:var(--mute);font-weight:600;cursor:pointer}
+.rcard.add:hover{border-color:var(--accent);color:var(--accent)}
+.pbadge.warnb{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.artline{display:flex;align-items:center;gap:12px;margin-top:12px}
+.artline b{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;overflow-wrap:anywhere}
+.artline .mav{width:44px;height:44px;font-size:1.05rem;background:var(--accent);color:var(--accent-ink)}
+.err{display:block;color:var(--bad);font-size:.78rem;font-weight:600;margin-top:5px}
+.invalid,input.invalid,select.invalid{border-color:var(--bad)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--bad) 22%,transparent)}
+.mcard .pbadge,.rcard .pbadge{position:static;flex:none}
+.mcard .mtop{padding-right:0}
+.mcard .nmt small{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25}
+.mcard{min-height:124px}
+.rbadges{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.rbadge{display:flex;flex-direction:column;line-height:1.2;border-radius:999px;padding:6px 16px;font-size:.84rem;font-weight:600;color:var(--ink)}
+.rbadge small{color:var(--mute);font-weight:500;font-size:.76rem}
+.rbadge.in{background:color-mix(in srgb,var(--good) 12%,transparent)}
+.rbadge.out{background:color-mix(in srgb,var(--bad) 10%,transparent)}
+.rbadge.warnp small{color:var(--warn);font-weight:700}
+.mcard{min-height:0;gap:10px}
+.mcard .mtop{align-items:center}
+.mcard .nmt b{display:block;font-size:.98rem;line-height:1.25}
+.mcard .nmt small{display:block;color:var(--mute);font-size:.82rem;line-height:1.3;white-space:normal}
+.mcard{overflow:visible;padding:16px 14px}
+.mcard .mtop{gap:10px;align-items:center}
+.mcard .nmt{flex:1;min-width:0}
+.mcard .nmt b,.mcard .nmt small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcard .nmt b{font-size:.98rem;line-height:1.25}
+.mcard .nmt small{color:var(--mute);font-size:.82rem;line-height:1.3}
+.xcorner{position:absolute;top:-9px;right:-9px;width:24px;height:24px;padding:0;display:grid;place-items:center;border-radius:50%;background:var(--panel);border:1px solid var(--line);color:var(--mute);box-shadow:var(--shadow);opacity:0;transition:opacity .12s,transform .12s;z-index:2}
+.xcorner svg{width:13px;height:13px}
+.mcard:hover .xcorner,.xcorner:focus-visible{opacity:1}
+.xcorner:hover{color:var(--danger);border-color:var(--danger);transform:scale(1.08)}
+@media (hover:none){.xcorner{opacity:1}}
+.mcard{padding:12px 14px}
+.mcard .mtop{padding-right:0}
+.mcard.clickable{cursor:pointer;transition:transform .1s,box-shadow .1s}
+.mcard.clickable:hover{transform:translateY(-1px);box-shadow:0 2px 4px rgba(0,0,0,.06),0 16px 30px -18px rgba(0,0,0,.35)}
+.mcard.clickable:focus-visible{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+.xcorner[disabled]{opacity:0!important}
+.rcards{display:grid;gap:12px;margin-top:12px}
+.rcard.add,.mcard.add{min-height:70px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr))}
+.sc .pc{font-size:.6rem;letter-spacing:-.03em}
+.spark{gap:6px}
+.kpis{display:flex;flex-wrap:nowrap;gap:12px}
+.kpis>.kpi{flex:1 1 0;min-width:0}
+.kpi .kt,.kpi .num{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spark{gap:3px}
+.sc .pc{font-size:.52rem;letter-spacing:-.06em}
+.sc span{font-size:.56rem}
+@media (max-width:1000px){.kpis{flex-wrap:wrap}.kpis>.kpi{flex:1 1 240px}}
+@media (max-width:560px){.kpis>.kpi{flex:1 1 100%}.sc .pc{font-size:.6rem}.spark{gap:5px}}
+.grid .tnm{white-space:nowrap}
+.grid .tnm .in{display:inline-flex;align-items:center;gap:6px}
+.grid .rst{display:inline-grid;place-items:center;width:22px;height:22px;padding:0;flex:none;opacity:.5;border-radius:6px}
+.grid .rst:hover{opacity:1;background:var(--soft)}
+.board{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;margin-top:14px;scroll-snap-type:x proximity}
+.col{flex:0 0 240px;scroll-snap-align:start;background:var(--soft);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.col.over{background:color-mix(in srgb,var(--warn) 12%,transparent)}
+.colhd b{display:block;font-size:.95rem;line-height:1.2}
+.colhd small{display:block;color:var(--mute);font-size:.74rem}
+.caps{display:grid;gap:5px;margin-top:8px}
+.cap{display:grid;grid-template-columns:62px 1fr auto;gap:7px;align-items:center;font-size:.7rem;color:var(--mute)}
+.cap .bar{height:5px}
+.pcard{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:12px;padding:9px 10px;cursor:pointer;box-shadow:var(--shadow)}
+.pcard:hover{transform:translateY(-1px)}
+.pcard b{display:block;font-size:.86rem;line-height:1.25;overflow-wrap:anywhere}
+.pcard small{display:block;color:var(--mute);font-size:.72rem;margin-top:2px}
+.pcard.Committed{border-left-color:var(--accent)}
+.pcard.part{border-style:dotted}
+.pfoot{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:6px;min-width:0}
+.pcard .pfoot .who{margin-top:0}
+:root{--tc0:#3b82f6;--tc1:#8b5cf6;--tc2:#0d9488;--tc3:#ec4899;--tc4:#0ea5e9;--tc5:#c026d3;--tc6:#a8734a;--tc7:#64748b}
+.ttag{--tc:var(--mute);display:inline-flex;align-items:center;max-width:100%;min-width:0;font-size:.68rem;font-weight:600;line-height:1.3;padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--tc) 16%,transparent);color:color-mix(in srgb,var(--tc) 72%,var(--ink));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
+table.ftab .ttag{font-size:.72rem;padding:3px 10px;min-height:24px;box-sizing:border-box}
+.typerow>input[data-f="ftype.name"]{border-left:6px solid var(--tc,var(--line))}
+.pcard.Uncommitted{border-left-color:var(--warn)}
+.pcard.New{border-left-color:var(--mute)}
+.colempty{color:var(--mute);font-size:.8rem;padding:6px 2px}
+.who{display:inline-flex;align-items:center}
+.who .mav{width:24px;height:24px;font-size:.62rem;border:2px solid var(--panel);margin-left:-7px;background:var(--soft);flex:none}
+.who .mav:first-child{margin-left:0}
+.who .more{font-size:.72rem;color:var(--mute);margin-left:6px}
+.pcard .who{margin-top:6px}
+.pcard .who .mav{border-color:var(--panel)}
+.asg{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px;margin-top:6px}
+.asgi{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:10px;font-size:.85rem;cursor:pointer}
+.asgi:hover{background:var(--soft)}
+.asgi input{width:16px;height:16px;flex:none;accent-color:var(--accent)}
+.asgi .mav{width:24px;height:24px;font-size:.62rem;background:var(--soft);flex:none}
+.asgi .asgp{color:var(--mute);font-size:.85rem;flex:none;margin-left:-4px}
+.asgi small{display:block;color:var(--mute);font-size:.74rem}
+.asgi .tx{min-width:0;line-height:1.2;overflow:hidden}
+.asgi.asgrow{cursor:default}.asgi.asgrow:hover{background:transparent}
+.asgi .asgl{display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer}
+.asgi input.asgw{width:70px;height:auto;flex:none;padding:5px 8px;text-align:right;accent-color:initial}
+.asgi input.asgw:disabled{opacity:.35;background:transparent}
+.wsum{grid-column:1/-1;font-size:.8rem;color:var(--mute);margin:2px 0 0;line-height:1.35}.wsum.ok{color:var(--good)}.wsum.warn{color:var(--warn)}
+table.fx.ltab{min-width:480px}
+table.fx.ltab td:not(:first-child),table.fx.ltab th:not(:first-child){overflow:visible;text-overflow:clip}
+.asgi .tx b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:640px){
+  .appbar .in{flex-wrap:nowrap;gap:8px}
+  .brand>span:not(.logo){display:none}
+  .brand .brandmark{width:26px;height:26px}
+  .hsep{display:none}
+  .hctx{flex:1;min-width:0}
+  .hpi{flex-direction:row;align-items:baseline;gap:6px;flex:0 1 auto;min-width:0}
+  .hpi b{flex:0 1 auto;min-width:3.5em;max-width:40vw;font-size:.9rem}
+  .hpi small{display:none}
+  .artm{flex:0 1 auto;min-width:3.5em;max-width:34vw}
+  .hctx{gap:8px}
+  .appbar .ctxrow{order:0;width:auto;flex:0 0 auto}
+  .pill.team{padding:2px 4px 2px 8px}
+  .pill.team>span{display:none}
+  .pill.team select{font-size:.82rem;padding:5px 2px;max-width:30vw}
+  .appbar .in>.icon:first-child{margin-left:-6px;padding:7px}
+}
+@media (max-width:640px){
+  .appbar .sp{display:none}
+  .appbar .hctx{flex:1 1 0;min-width:0;flex-direction:column;align-items:flex-start;gap:1px}
+  .appbar .artm{display:block;max-width:100%;min-width:0;font-size:.95rem;line-height:1.2}
+  .appbar .hpi{flex-direction:row;align-items:baseline;gap:6px;max-width:100%;min-width:0}
+  .appbar .hpi b{max-width:none;min-width:0;font-size:.8rem;font-weight:600;color:var(--mute)}
+  .appbar .hpi small{display:inline;font-size:.72rem;white-space:nowrap;flex:none}
+  .appbar .ctxrow{flex:0 0 auto}
+}
+
+/* roles and members grids: 2 columns on phones, 3 on wider screens */
+.mcards,.rcards{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:820px){.mcards,.rcards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:620px){
+  .mcards,.rcards{gap:10px}
+  .mcard{padding:12px 12px 12px 11px}
+  .mcard .mtop{gap:8px}
+  .mcard .mtop .mav{width:36px;height:36px;font-size:.9rem}
+  .mcard .nmt b,.mcard .nmt small{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+  .mcard .nmt b{font-size:.92rem}
+  .mcard .nmt small{font-size:.78rem}
+}
+/* feature form */
+.ft-plats{display:flex;flex-wrap:wrap;gap:8px}
+.ft-chip{position:relative;display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:.88rem;font-weight:600;color:var(--mute);cursor:pointer;transition:background .12s,border-color .12s,color .12s}
+.ft-chip input{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+.ft-chip:hover{border-color:var(--mute)}
+.ft-chip:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+.ft-chip.on{background:color-mix(in srgb,var(--accent) 14%,var(--panel));border-color:var(--accent);color:var(--ink)}
+.ft-chip.on::before{content:"\2713";color:var(--accent);font-weight:800}
+.ftp-list{display:grid;gap:10px}
+.ftp{display:grid;gap:12px;padding:14px;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,var(--soft) 55%,var(--panel))}
+.ftp-h b{font-size:.95rem}
+/* add roles: badge input with suggestions */
+.ra-wrap{position:relative}
+.ra-lab{font-size:.85rem;color:var(--mute);margin-bottom:5px}
+.ra-field{display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 8px;cursor:text;transition:border-color .15s,box-shadow .15s}
+.ra-field:hover{border-color:var(--mute)}
+.ra-field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+.ra-field input.ra-in{flex:1 1 140px;width:auto!important;min-width:120px;border:0;background:transparent;box-shadow:none!important;padding:5px 4px}
+.ra-badge{display:inline-flex;align-items:center;gap:2px;max-width:100%;background:var(--soft);border-radius:999px;padding:3px 4px 3px 11px;font-size:.84rem;font-weight:600}
+.ra-badge span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ra-badge button.ra-x{border:0;background:transparent;padding:3px;border-radius:50%;display:grid;place-items:center;color:var(--mute);line-height:0}
+.ra-badge button.ra-x:hover{background:var(--line);color:var(--ink)}
+.ra-sug{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:20;max-height:230px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 50px -12px rgba(0,0,0,.35);padding:6px}
+.ra-sug[hidden]{display:none}
+.ra-opt{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:9px 10px;border-radius:9px;cursor:pointer}
+.ra-opt b{font-size:.9rem;font-weight:600}
+.ra-opt small{color:var(--mute);font-size:.75rem;text-align:right}
+.ra-opt.on,.ra-opt:hover{background:var(--soft)}
+.ra-opt.new b{color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="appbar"><div class="in" id="bar"></div></header>
+<div class="wrap" id="app"></div>
+<script>
+const ROLES=["Frontend developer","Backend developer","Frontend QA","Backend QA","Team Lead","Product Owner","Scrum Master","Tech Lead"];
+const VALS=[1,0.75,0.5,0.25,0];
+const KEY="art-pi-planner:v1";
+const toMonday=iso=>{const d=new Date(iso+"T00:00:00Z");d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));return d.toISOString().slice(0,10);};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const initials=s=>{const w=String(s||"").trim().split(/[\s._-]+/).filter(Boolean);if(!w.length)return "?";const f=[...w[0]][0]||"";const l=w.length>1?[...w[w.length-1]][0]||"":"";return (f+l).toUpperCase();};
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function nextMonday(){const d=new Date();d.setDate(d.getDate()+((8-d.getDay())%7||7));return d.toISOString().slice(0,10);}
+let S={arts:[],avail:{},artId:null,piId:null,done:false};
+let ui={step:1,view:"plan",setupTab:"teams",team:"all",paint:"cycle"};
+try{const raw=localStorage.getItem(KEY);if(raw){const o=JSON.parse(raw);S=o.S||S;ui=Object.assign(ui,o.ui||{});}}catch(e){}
+if(!S.arts){S.arts=[];if(S.art||(S.teams&&S.teams.length)){S.arts.push({id:uid(),name:S.art||"ART",teams:S.teams||[],pis:S.pi?[{id:uid(),...S.pi}]:[],off:S.off||[]});}delete S.art;delete S.teams;delete S.pi;delete S.off;}
+S.avail=S.avail||{};if(!S.arts.find(a=>a.id===S.artId))S.artId=S.arts[0]&&S.arts[0].id;
+ui.modal=null;ui.menu=false;ui.paint=ui.paint||"cycle";ui.view="plan";ui.setupTab=ui.setupTab||"teams";ui.team=ui.team||"all";ui.mainTab=ui.mainTab||"availability";if(ui.gf&&ui.gf.platform==="Mobile")ui.gf.platform="Frontend";
+S.arts.forEach(a=>{a.pis.forEach(p=>p.off=p.off||[]);(a.off||[]).forEach(o=>{const p=a.pis.find(p=>o.to>=p.start&&o.from<=piEnd(p))||a.pis[0];if(p)p.off.push(o);});delete a.off;});
+if(ui.setupTab==="off"||ui.setupTab==="pis")ui.setupTab="general";
+function A(){return S.arts.find(a=>a.id===S.artId);}
+function curPI(){const a=A();return a&&(a.pis.find(p=>p.id===S.piId)||a.pis[0]);}
+function scopeTeams(){const a=A(),f=a.teams.filter(t=>t.id===ui.team);return f.length?f:a.teams;}
+function nextPIStart(a){const l=[...a.pis].sort((x,y)=>x.start.localeCompare(y.start)).pop();if(!l)return nextMonday();const [y,m,d]=l.start.split("-").map(Number);return new Date(Date.UTC(y,m-1,d+l.sprints*l.weeks*7)).toISOString().slice(0,10);}
+let TEAM_OF={},GRID=null;
+const closedFor=(tid,date)=>{for(const p of A().pis){if(date<p.start||date>piEnd(p))continue;const o=(p.off||[]).find(o=>(o.scope==="all"||o.scope===tid)&&date>=o.from&&date<=o.to);if(o)return o;}};
+function piEnd(p){const [y,m,d]=p.start.split("-").map(Number);return new Date(Date.UTC(y,m-1,d+p.sprints*p.weeks*7-1)).toISOString().slice(0,10);}
+const work=(mid,days)=>days.filter(d=>!closedFor(TEAM_OF[mid],d)).length;
+const n2=x=>Number(x.toFixed(2));
+function save(){try{localStorage.setItem(KEY,JSON.stringify({S,ui}));}catch(e){}}
+
+const allMembers=()=>A().teams.flatMap(t=>t.members.map(m=>({...m,team:t.name})));
+
+function piSprints(pi){
+  if(!pi||!pi.start)return[];
+  const [y,m,d]=pi.start.split("-").map(Number);
+  const out=[];
+  for(let s=0;s<pi.sprints;s++){
+    const days=[];
+    for(let i=0;i<pi.weeks*7;i++){
+      const dt=new Date(Date.UTC(y,m-1,d+s*pi.weeks*7+i));
+      const wd=dt.getUTCDay();
+      if(wd>0&&wd<6)days.push(dt.toISOString().slice(0,10));
+    }
+    out.push(days);
+  }
+  return out;
+}
+const fmt=iso=>new Date(iso+"T00:00:00Z").toLocaleDateString("en-GB",{day:"numeric",month:"short",timeZone:"UTC"});
+const sd=iso=>{const [,m,d]=iso.split("-");return `${+d}/${+m}`;};
+const wd=iso=>new Date(iso+"T00:00:00Z").toLocaleDateString("en-GB",{weekday:"short",timeZone:"UTC"});
+const getA=(mid,date)=>{if(closedFor(TEAM_OF[mid],date))return 0;const v=(S.avail[mid]||{})[date];return v===undefined?1:v;};
+const vcls=v=>v===1?"v1":v===0.75?"v75":v===0.5?"v5":v===0.25?"v25":"v0";
+const vlabel=v=>v===0?"0":String(v).replace(/^0\./,".");
+
+function setAvail(mid,date,v){(S.avail[mid]=S.avail[mid]||{})[date]=v;}
+function sum(mid,days){return days.reduce((a,d)=>a+getA(mid,d),0);}
+function addTeam(name){const id=uid();A().teams.push({id,name,members:[]});return id;}
+
+/* ---------- views ---------- */
+const PEN='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',TRASH='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v6M14 10v6"/></svg>';
+const askBtn=(kind,id,label="Delete",cls="ghost danger",extra="")=>`<button class="${cls}" data-act="ask" data-k="${kind}" data-id="${id||""}" ${extra}>${label}</button>`;
+function askText(kind,id){
+  const a=A();
+  if(kind==="team"){const t=a.teams.find(x=>x.id===id)||{};return [`Delete team ${esc(t.name||"")}?`,`This also deletes its ${(t.members||[]).length} members, their availability, its days off and its features in every Program Increment. It can't be undone.`];}
+  if(kind==="art"){const only=S.arts.length<2;return [`Delete ${esc((S.arts.find(x=>x.id===id)||a).name)}?`,`This deletes the whole Agile Release Train: its roles, teams, members, Program Increments, availability and features.${only?" It is your last one, so the app starts fresh from setup.":""} It can't be undone.`];}
+  if(kind==="pi"){const x=a.pis.find(p=>p.id===id)||{};return [`Delete ${esc(x.name||"")}?`,"This also deletes its days off and features, including their delivered story points. It can't be undone."];}
+  if(kind==="feature"){const f=(curPI().features||[]).find(x=>x.id===id)||{};return [`Delete ${esc(f.name||"")}?`,"This also deletes its estimated and delivered story points. It can't be undone."];}
+  if(kind==="role"){const r=a.roles.find(x=>x.id===id)||{};return [`Delete role ${esc(r.name||"")}?`,"It will no longer be offered when you add members."];}
+  if(kind==="ftype"){const x=a.ftypes.find(y=>y.id===id)||{};return [`Delete type ${esc(x.name||"")}?`,"It will no longer be offered when you add features."];}
+  if(kind==="member"){let m=null;a.teams.forEach(t=>t.members.forEach(x=>{if(x.id===id)m=x;}));return [`Delete ${esc((m||{}).name||"")}?`,"This also deletes the availability recorded for them."];}
+  if(kind==="resetAvail"){const tm=a.teams.find(x=>x.id===id)||{};
+    return [`Reset availability of ${esc(tm.name||"")}?`,"This sets every day currently visible in the grid back to fully available (1), for the members shown. Anything hidden by the filters is left as it is. Public holidays and team days off are not affected. It can't be undone."];}
+  if(kind==="off"){let o=null;a.pis.forEach(p=>(p.off||[]).forEach(x=>{if(x.id===id)o=x;}));return [`Delete ${esc((o||{}).name||"")}?`,"Those days count as working days again."];}
+  return ["Delete?",""];
+}
+function doDelete(kind,id){
+  const a=A();
+  if(kind==="team"){const tm=a.teams.find(x=>x.id===id);if(tm){tm.members.forEach(m=>delete S.avail[m.id]);a.teams=a.teams.filter(x=>x.id!==id);a.pis.forEach(p=>{p.off=(p.off||[]).filter(o=>o.scope!==id);p.features=(p.features||[]).filter(f=>f.team!==id);});}}
+  else if(kind==="art"){const tgt=S.arts.find(x=>x.id===id)||a;tgt.teams.forEach(x=>x.members.forEach(m=>delete S.avail[m.id]));S.arts=S.arts.filter(x=>x.id!==tgt.id);
+    if(!S.arts.length){S={arts:[],avail:{},artId:null,piId:null,done:false};ui={step:1,view:"plan",setupTab:"teams",team:"all",paint:"cycle",modal:null,menu:false};}
+    else if(S.artId===tgt.id){S.artId=S.arts[0].id;S.piId=null;ui.team="all";ui.view="plan";}}
+  else if(kind==="reset"){S={arts:[],avail:{},artId:null,piId:null,done:false};ui={step:1,view:"plan",setupTab:"teams",team:"all",paint:"cycle",modal:null};}
+  else if(kind==="pi"){a.pis=a.pis.filter(p=>p.id!==id);if(S.piId===id)S.piId=null;}
+  else if(kind==="feature"){const pi=curPI();pi.features=pi.features.filter(f=>f.id!==id);}
+  else if(kind==="role")a.roles=a.roles.filter(r=>r.id!==id);
+  else if(kind==="ftype")a.ftypes=a.ftypes.filter(x=>x.id!==id);
+  else if(kind==="member"){a.teams.forEach(x=>x.members=x.members.filter(m=>m.id!==id));delete S.avail[id];}
+  else if(kind==="resetAvail"){const tm0=a.teams.find(x=>x.id===id),pi=curPI();
+    if(tm0&&pi){const days=(GRID&&GRID.days)||piSprints(pi).flat(),ok=(GRID&&GRID.passes)||(()=>true);
+      tm0.members.filter(ok).forEach(m=>{if(S.avail[m.id])days.forEach(d=>delete S.avail[m.id][d]);});}}
+  else if(kind==="off")a.pis.forEach(p=>p.off=(p.off||[]).filter(o=>o.id!==id));
+}
+const GF0={group:"all",platform:"all",role:"all",sprint:"all",absent:false};
+const PLATFORMS=["Frontend","Backend"];
+function renamePlat(a){
+  const mv=o=>{if(o&&typeof o==="object"&&o.Mobile!==undefined){if(o.Frontend===undefined)o.Frontend=o.Mobile;delete o.Mobile;}};
+  a.roles&&a.roles.forEach(r=>{if(r.platform==="Mobile")r.platform="Frontend";});
+  a.teams.forEach(t=>mv(t.velocity));
+  a.pis.forEach(p=>{Object.values(p.velocity||{}).forEach(mv);(p.features||[]).forEach(f=>{mv(f.pts);mv(f.del);});});
+}
+const defPlat=n=>/frontend|mobile|ios|android|web/i.test(n)?"Frontend":/backend/i.test(n)?"Backend":"";
+const platOf=n=>{const r=A().roles.find(x=>x.name===n);return r?(r.platform||""):"";};
+const tvel=(tm,pl)=>{const v=tm.velocity,n=v&&typeof v==="object"?num(v[pl]):num(v);return n==null?30:n;};
+const fAsg=(a,f)=>{const tm=a.teams.find(x=>x.id===f.team);if(!tm)return [];const ids=f.who||[];return tm.members.filter(m=>ids.includes(m.id));};
+const wtInfo=(a,f)=>{const tm=a.teams.find(x=>x.id===f.team),out=[];if(!tm)return out;PLATFORMS.forEach(pl=>{let w=0,any=false;tm.members.forEach(m=>{if((f.who||[]).includes(m.id)&&isPlanned(m.role)&&platOf(m.role)===pl){const n=num((f.wt||{})[m.id]);if(n>0){w+=n;any=true;}}});if(any){w=Math.round(w*10)/10;out.push({pl,w,diff:Math.round((100-w)*10)/10});}});return out;};
+const typeTag=(a,name)=>{const x=a.ftypes.find(y=>y.name===name);return `<span class="ttag"${x&&typeof x.c==="number"?` style="--tc:var(--tc${x.c})"`:""} title="${esc(name)}">${esc(name)}</span>`;};
+const whoStack=(ms,max=5,wt)=>ms.length?`<span class="who">${ms.slice(0,max).map(m=>`<span class="mav" title="${esc(m.name)} · ${esc(m.role)}${wt&&num(wt[m.id])>0?" · "+n2(num(wt[m.id]))+"%":""}">${esc(initials(m.name))}</span>`).join("")}${ms.length>max?`<span class="more">+${ms.length-max}</span>`:""}</span>`:"";
+const fpts=(f,pl)=>num((f.pts||{})[pl])||0;
+const ftotal=f=>PLATFORMS.reduce((x,pl)=>x+fpts(f,pl),0);
+const fdel=(f,pl)=>num((f.del||{})[pl])||0;
+const fdelT=f=>PLATFORMS.reduce((x,pl)=>x+fdel(f,pl),0);
+const hasAnyDel=f=>PLATFORMS.some(pl=>f.del&&f.del[pl]!=null);
+const asT=x=>Array.isArray(x)?x:[x];
+const delivered=(p,tm,pl)=>asT(tm).reduce((s,t)=>s+p.features.filter(f=>f.team===t.id).reduce((x,f)=>x+(pl?fdel(f,pl):fdelT(f)),0),0);
+const hasDeliv=(p,tm,pl)=>asT(tm).some(t=>p.features.some(f=>f.team===t.id&&(pl?(f.del&&f.del[pl]!=null):hasAnyDel(f))));
+const nvel=(p,tm,pl)=>{const ts=asT(tm).filter(t=>hasDeliv(p,t,pl));if(!ts.length)return null;const d=ts.reduce((s,t)=>s+planDays(p,t,pl).a,0);return d>0?delivered(p,ts,pl)/d*100:null;};
+const SIZES=["XS","S","M","L","XL"],STATUSES=["Committed","Uncommitted","New"];
+const XSVG='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const DEFAULT_PLANNED=["Frontend developer","Backend developer","Frontend QA","Backend QA"];
+function nextTypeColor(a){const u=new Set(a.ftypes.map(x=>x.c).filter(c=>typeof c==="number"));for(let i=0;i<8;i++)if(!u.has(i))return i;return a.ftypes.length%8;}
+function ensureRoles(a){
+  renamePlat(a);
+  a.teams.forEach(t=>{if(!t.velocity||typeof t.velocity!=="object"){const v=num(t.velocity);t.velocity={};PLATFORMS.forEach(pl=>t.velocity[pl]=v==null?30:v);}delete t.baseline;});
+  if(!a.ftypes)a.ftypes=["Feature","Support","Tech debt","Kaizen","Other"].map(n=>({id:uid(),name:n}));
+  a.ftypes.forEach(x=>{if(typeof x.c!=="number")x.c=nextTypeColor(a);});
+  a.pis.forEach(p=>{p.off=p.off||[];p.features=p.features||[];});
+  if(!a.roles)a.roles=ROLES.map(n=>({id:uid(),name:n,planned:DEFAULT_PLANNED.includes(n)}));
+  a.roles.forEach(r=>{if(!r.id)r.id=uid();if(r.platform===undefined)r.platform=defPlat(r.name);});
+  a.teams.forEach(t=>t.members.forEach(m=>{if(m.role&&!a.roles.some(r=>r.name===m.role))a.roles.push({id:uid(),name:m.role,planned:false});}));
+  a.pis.forEach(p=>{if(p.velUnit!=="md"){const nv={};Object.keys(p.velocity||{}).forEach(tid=>{const tm=a.teams.find(x=>x.id===tid),d=num(p.velocity[tid]),pd=tm?planDays(p,tm).a:0;if(d!=null&&pd)nv[tid]=Math.round(d/pd*1000)/10;});p.velocity=nv;p.velUnit="md";}});
+  a.pis.forEach(p=>{p.velocity=p.velocity||{};Object.keys(p.velocity).forEach(tid=>{const v=p.velocity[tid];if(!v||typeof v!=="object"){const n=num(v);p.velocity[tid]={};if(n!=null)PLATFORMS.forEach(pl=>p.velocity[tid][pl]=n);}});p.features.forEach(f=>{if(!f.who)f.who=[];if(!f.wt||typeof f.wt!=="object")f.wt={};if(!f.pts){f.pts={};const n=num(f.points);if(n!=null&&n>0)f.pts[f.platform||PLATFORMS[0]]=n;}delete f.points;delete f.platform;});});
+  a.pis.forEach(p=>p.features.forEach(f=>{if(f.wtU==="pct")return;const tm=a.teams.find(x=>x.id===f.team),nw={};Object.keys(f.wt||{}).forEach(id=>{const m=tm&&tm.members.find(x=>x.id===id),pl=m&&platOf(m.role),est=pl?num((f.pts||{})[pl]):null,sp=num(f.wt[id]);if(est>0&&sp>0)nw[id]=Math.round(sp/est*1000)/10;});f.wt=nw;f.wtU="pct";}));
+  a.pis.forEach(p=>p.features.forEach(f=>{if(!Array.isArray(f.platforms)){const s=new Set([...Object.keys(f.pts||{}),...Object.keys(f.del||{})]);if(!s.size){const tm=a.teams.find(x=>x.id===f.team);(f.who||[]).forEach(id=>{const m=tm&&tm.members.find(x=>x.id===id),pl=m&&platOf(m.role);if(pl)s.add(pl);});}f.platforms=PLATFORMS.filter(p2=>s.has(p2));}}));
+}
+const isPlanned=n=>{const r=A().roles.find(x=>x.name===n);return !!(r&&r.planned);};
+const platRank=pl=>{const i=PLATFORMS.indexOf(pl);return i<0?PLATFORMS.length:i;};
+const sortedRoles=()=>A().roles.slice().sort((a,b)=>(+!!a.planned)-(+!!b.planned)||(a.planned?platRank(a.platform)-platRank(b.platform):0)||a.name.localeCompare(b.name));
+const sortedMembers=ms=>ms.map((m,i)=>[m,i]).sort((x,y)=>(+isPlanned(x[0].role))-(+isPlanned(y[0].role))||x[1]-y[1]).map(x=>x[0]);
+const roleOpts=sel=>A().roles.map(r=>`<option${r.name===sel?" selected":""}>${esc(r.name)}</option>`).join("");
+const roleDel=(r,n)=>`<button class="ghost icon" data-act="ask" data-k="role" data-id="${r.id}" ${n>0?"disabled":""} title="${n>0?"In use by "+n+(n===1?" member":" members"):"Delete role"}" aria-label="Delete role ${esc(r.name)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
+function roleCard(r,plain){
+  const warn=r.planned&&!r.platform;
+  const used=usedRole(r.name);
+  return `<div class="mcard ${r.planned?"in":"out"}${plain?"":" clickable"}"${plain?"":` role="button" tabindex="0" data-act="openModal" data-m="role-edit" data-id="${r.id}"`} title="${esc(r.name)}${r.planned?" · included in planning":" · excluded from planning"}">
+    ${plain?"":`<button class="xcorner" data-act="ask" data-k="role" data-id="${r.id}" ${used?"disabled":""} title="${used?"In use by "+used+(used===1?" member":" members"):"Delete role"}" aria-label="Delete role ${esc(r.name)}">${XSVG}</button>`}
+    <div class="mtop"><div class="nmt"><b>${esc(r.name)}</b><small${warn?' style="color:var(--warn);font-weight:700"':""}>${r.planned?(warn?"Pick a platform":esc(r.platform)):"Not in planning"}</small></div></div></div>`;
+}
+const usedRole=n=>A().teams.reduce((x,t)=>x+t.members.filter(m=>m.role===n).length,0);
+const ROLE_SUGGEST=["iOS Engineer","Android Engineer","Java Engineer","Frontend QA","Backend QA","Tech Lead","Team Lead","Scrum Master","Product Owner"];
+let roleDraft=[],raHi=0;
+const raKey=s=>String(s||"").trim().toLowerCase();
+const raTaken=n=>{const k=raKey(n);return A().roles.some(r=>raKey(r.name)===k)||roleDraft.some(r=>raKey(r.name)===k);};
+function raList(raw){
+  const q=raKey(raw),typed=String(raw||"").trim().replace(/\s+/g," ");
+  const l=ROLE_SUGGEST.filter(s=>!raTaken(s)&&(!q||raKey(s).includes(q)));
+  l.sort((a,b)=>(raKey(b).startsWith(q)?1:0)-(raKey(a).startsWith(q)?1:0));
+  const items=l.map(s=>({name:s,custom:false}));
+  if(q&&!ROLE_SUGGEST.some(s=>raKey(s)===q)&&!raTaken(typed))items.push({name:typed,custom:true});
+  return items;
+}
+const raBadge=d=>`<span class="ra-badge"><span title="${esc(d.name)}">${esc(d.name)}</span><button type="button" class="ra-x" data-ra="rm" data-id="${d.id}" aria-label="Remove ${esc(d.name)}">${XSVG}</button></span>`;
+const raBtnLabel=()=>roleDraft.length>1?`Add ${roleDraft.length} roles`:roleDraft.length===1?"Add role":"Add roles";
+function roleAddForm(){
+  return `<h2 style="margin-bottom:14px">Add roles</h2>
+  <form data-form="roleAdd" class="ff" autocomplete="off">
+    <div class="ra-wrap">
+      <div class="ra-lab">Roles</div>
+      <div class="ra-field" id="ra-field"><span id="ra-badges" style="display:contents">${roleDraft.map(raBadge).join("")}</span><input id="ra-in" class="ra-in" name="rolein" data-autofocus autocomplete="off" autocapitalize="words" aria-label="Role name" placeholder="${roleDraft.length?"Add another role":"e.g. iOS Engineer"}"></div>
+      <div class="ra-sug" id="ra-sug" role="listbox" hidden></div>
+      <div id="ra-err"></div>
+      <p class="mute" style="margin:6px 0 0;font-size:.8rem">Type a role and press Enter, or pick a suggestion. Each one becomes a badge, so you can add several before saving.</p>
+    </div>
+    <label class="fsw" style="margin:4px 0"><span class="sw"><input type="checkbox" name="planned" data-f="roleform.planned" checked><span class="knob"></span></span>Included in planning</label>
+    <div id="platwrap"><label class="f">Platform<select name="platform">${PLATFORMS.map(pl=>`<option>${pl}</option>`).join("")}</select></label>
+    <p class="mute" style="margin:6px 0 0;font-size:.8rem">Applies to all the roles you add here. Velocity, forecast and story points are split per platform, so a role included in planning needs one.</p></div>
+    <div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" data-act="closeModal">Cancel</button><button class="primary" id="ra-submit">${raBtnLabel()}</button></div>
+  </form>`;
+}
+function raErr(msg){const f=document.getElementById("ra-field"),e=document.getElementById("ra-err");if(f)f.classList.add("invalid");if(e)e.innerHTML=`<span class="err">${esc(msg)}</span>`;}
+function raUI(){
+  const bd=document.getElementById("ra-badges");if(!bd)return;
+  bd.innerHTML=roleDraft.map(raBadge).join("");
+  const b=document.getElementById("ra-submit"),i=document.getElementById("ra-in");
+  if(b)b.textContent=raBtnLabel();
+  if(i)i.placeholder=roleDraft.length?"Add another role":"e.g. iOS Engineer";
+}
+function raSug(open){
+  const box=document.getElementById("ra-sug"),inp=document.getElementById("ra-in");if(!box||!inp)return;
+  const items=open===false?[]:raList(inp.value);
+  raHi=Math.min(raHi,Math.max(0,items.length-1));
+  box._items=items;
+  if(!items.length){box.hidden=true;box.innerHTML="";return;}
+  box.hidden=false;
+  box.innerHTML=items.map((s,i)=>`<div class="ra-opt${i===raHi?" on":""}${s.custom?" new":""}" role="option" data-ra="pick" data-i="${i}"><b>${s.custom?"Add “"+esc(s.name)+"”":esc(s.name)}</b>${s.custom?"<small>New role</small>":""}</div>`).join("");
+}
+function raCommit(){
+  const inp=document.getElementById("ra-in");if(!inp)return true;
+  const t=inp.value.trim().replace(/\s+/g," ");if(!t)return true;
+  if(raTaken(t)){raErr(`“${t}” already exists as a role.`);return false;}
+  const s=ROLE_SUGGEST.find(x=>raKey(x)===raKey(t));
+  roleDraft.push({id:uid(),name:s||t});
+  inp.value="";raHi=0;raUI();return true;
+}
+function raPick(it){
+  const inp=document.getElementById("ra-in");if(!inp)return;
+  const f=inp.closest("form");if(f)clearErr(f);
+  if(it.custom){if(!raCommit())return;}
+  else if(raTaken(it.name)){raErr(`“${it.name}” already exists as a role.`);return;}
+  else{roleDraft.push({id:uid(),name:it.name});inp.value="";raHi=0;raUI();}
+  raSug(false);inp.focus();
+}
+function roleForm(id){
+  const a=A(),r=id&&id!=="new"?a.roles.find(x=>x.id===id):null;
+  if(!r)return roleAddForm();
+  const v=r||{name:"",planned:true,platform:PLATFORMS[0]};
+  return `<h2 style="margin-bottom:14px">${r?"Edit role":"Add role"}</h2>
+  <form data-form="role" data-id="${r?r.id:""}" class="ff">
+    <label class="f">Name<input name="name" value="${esc(v.name)}" data-autofocus placeholder="e.g. Backend developer"></label>
+    <label class="fsw" style="margin:4px 0"><span class="sw"><input type="checkbox" name="planned" data-f="roleform.planned" ${v.planned?"checked":""}><span class="knob"></span></span>Included in planning</label>
+    <div id="platwrap" style="${v.planned?"":"display:none"}"><label class="f">Platform<select name="platform">${PLATFORMS.map(pl=>`<option${v.platform===pl?" selected":""}>${pl}</option>`).join("")}</select></label>
+    <p class="mute" style="margin:6px 0 0;font-size:.8rem">Velocity, forecast and story points are split per platform, so a role included in planning needs one.</p></div>
+    <div class="row" style="justify-content:space-between;margin-top:10px">${r?`<button type="button" class="ghost danger" data-act="ask" data-k="role" data-id="${r.id}" ${usedRole(r.name)?"disabled":""}>Delete</button>`:"<span></span>"}
+    <div class="row" style="margin:0"><button type="button" data-act="closeModal">Cancel</button><button class="primary">${r?"Save":"Add role"}</button></div></div></form>`;
+}
+function missPlat(){return A().roles.filter(r=>r.planned&&!r.platform);}
+function rolesView(){
+  return `<p class="help">These are the roles you can give the people in your teams. Switch on <b>Included in planning</b> for the roles that build the product, typically developers and QA. Only their available days count towards velocity and forecast, so roles such as Scrum Master or Product Owner stay switched off. A role included in planning also needs a <b>platform</b>, because velocity, forecast and story points are split between Frontend and Backend.</p>
+  <div class="panel"><div class="fsec">Roles</div>
+  <div class="rcards">${sortedRoles().map(r=>roleCard(r)).join("")}
+  <button class="mcard add" data-act="openModal" data-m="role-edit" data-id="new">+ Add roles</button></div>
+  ${missPlat().length?`<div class="note"><b>!</b><div><b>${missPlat().map(r=>esc(r.name)).join(", ")}</b> ${missPlat().length===1?"is":"are"} included in planning without a platform. Velocity and forecast are split per platform, so ${missPlat().length===1?"its":"their"} days are left out until you pick one.</div></div>`:""}</div>`;
+}
+const typeDel=(x,n,total)=>`<button class="ghost icon" data-act="ask" data-k="ftype" data-id="${x.id}" ${n>0?"disabled":""} title="${n>0?"In use by "+n+(n===1?" feature":" features"):"Delete type"}" aria-label="Delete type ${esc(x.name)}">${XSVG}</button>`;
+const typeDraft=()=>`<div class="typerow draft"><input data-draft="ftype" placeholder="New feature type" aria-label="New feature type"><span></span></div>`;
+function typesRows(){
+  const a=A(),used=n=>a.pis.reduce((s,p)=>s+(p.features||[]).filter(f=>f.type===n).length,0);
+  return a.ftypes.map(x=>`<div class="typerow"><input data-f="ftype.name" data-id="${x.id}" style="--tc:var(--tc${x.c})" value="${esc(x.name)}" aria-label="Feature type name">${typeDel(x,used(x.name),a.ftypes.length)}</div>`).join("")+typeDraft();
+}
+function typesView(){
+  return `<p class="help">Feature types belong to this Agile Release Train and are offered when you add a feature. Type in the empty row to add one. A type that features still use can't be deleted.</p>
+  <div class="panel"><div class="fsec">Feature types</div><div style="margin-top:6px">${typesRows()}</div></div>`;
+}
+
+const xbtn=m=>`<button class="ghost icon" data-act="ask" data-k="member" data-id="${m.id}" title="Delete member" aria-label="Delete ${esc(m.name)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
+
+const itip=x=>`<span class="info" tabindex="0" role="note" aria-label="${x}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip">${x}</span></span>`;
+function memberCard(m,tid){
+  const inp=isPlanned(m.role),pl=platOf(m.role);
+  return `<div class="mcard ${inp?"in":"out"} clickable" role="button" tabindex="0" data-act="openModal" data-m="member-edit" data-id="${m.id}" title="Edit ${esc(m.name)} · ${esc(m.role)}">
+    <button class="xcorner" data-act="ask" data-k="member" data-id="${m.id}" title="Delete member" aria-label="Delete ${esc(m.name)}">${XSVG}</button>
+    <div class="mtop"><span class="mav">${esc(initials(m.name))}</span>
+    <div class="nmt"><b>${esc(m.name)}</b><small>${esc(m.role)}</small></div></div></div>`;
+}
+function memberForm(id){
+  const a=A();let m=null,tm=null;
+  if(id&&id.indexOf("new:")===0)tm=a.teams.find(x=>x.id===id.slice(4));
+  else a.teams.forEach(t2=>t2.members.forEach(x=>{if(x.id===id){m=x;tm=t2;}}));
+  if(!tm)return "";
+  const v=m||{name:"",role:(a.roles[0]||{}).name||""};
+  return `<h2 style="margin-bottom:14px">${m?"Edit member":"Add member"} <span class="mute" style="font-weight:600">${esc(tm.name)}</span></h2>
+  <form data-form="member" data-id="${m?m.id:""}" data-team="${tm.id}" class="ff">
+    <label class="f">Name<input name="name" value="${esc(v.name)}" data-autofocus></label>
+    <label class="f">Role<select name="role">${roleOpts(v.role)}</select></label>
+    <div class="row" style="justify-content:space-between;margin-top:10px">${m?`<button type="button" class="ghost danger" data-act="ask" data-k="member" data-id="${m.id}">Delete</button>`:"<span></span>"}
+    <div class="row" style="margin:0"><button type="button" data-act="closeModal">Cancel</button><button class="primary">${m?"Save":"Add member"}</button></div></div></form>`;
+}
+function teamEditor(t,withMembers,flat){
+  const inner=`<div class="fsec">Details</div>
+    <label class="f">Team name<input data-f="team.name" data-id="${t.id}" value="${esc(t.name)}" aria-label="Team name"></label>
+    <div class="fsec" style="margin-top:10px">Velocity ${itip("Story points this team delivers per 100 days of its planning roles. It is only used to forecast until the team has delivered story points in an earlier Program Increment; after that the real average takes over.")}</div>
+    <div class="ff2">${PLATFORMS.map(pl=>`<label class="f">${pl}<input data-f="team.velocity" data-id="${t.id}" data-pl="${pl}" inputmode="decimal" value="${esc(tvel(t,pl))}"></label>`).join("")}</div>
+    ${withMembers?`<div class="fsec" style="margin-top:10px">Members</div>
+    <div class="mcards">${sortedMembers(t.members).map(m=>memberCard(m,t.id)).join("")}
+      <button class="mcard add" data-act="openModal" data-m="member-edit" data-id="new:${t.id}">+ Add member</button></div>`:""}`;
+  return flat?`<div class="ff">${inner}</div>`:`<div class="panel">${inner}</div>`;
+}
+
+function wizard(){
+  const n=ui.step,a=A();
+  let body="",next=false,nextLabel="Continue";
+  if(n===1){
+    body=`<h2>Name</h2><p class="help">An Agile Release Train groups all the teams you plan a Program Increment for. You can rename it later.</p>
+    <div class="panel"><div class="fsec">Name</div><label class="f" style="margin-top:10px">Name of the train<input data-f="art.name" value="${esc(a.name)}" placeholder="e.g. Checkout" data-autofocus></label></div>`;
+    next=!!a.name.trim();
+  }else if(n===2){
+    body=`<h2>Roles</h2>${rolesView()}`;
+    next=a.roles.length>0;
+  }else if(n===3){
+    body=`<h2>Teams and members</h2><p class="help">Add every team of this train. Each team has its own starting velocity per platform and its own people. You can change all of it later.</p>
+    ${a.teams.map(t=>`<div class="panel">${teamEditor(t,true,true)}<div class="row" style="justify-content:flex-end;margin-top:14px">${askBtn("team",t.id,TRASH+"Delete team")}</div></div>`).join("")}
+    <div class="panel"><div class="fsec">Add a team</div><form data-form="team" class="row" style="align-items:flex-end;margin-top:10px"><label class="f grow">Team name<input name="name" placeholder="e.g. Vega"${a.teams.length?"":" data-autofocus"}></label><button class="primary">Add team</button></form></div>`;
+    next=a.teams.length>0&&allMembers().length>0;
+  }else if(n===4){
+    body=`<h2>Feature types</h2>${typesView()}`;
+    next=a.ftypes.length>0;
+  }else{
+    const ini=s=>esc(initials(s));
+    const teamBlock=tm=>`<div class="stm"><div class="secrow"><div><h4>${esc(tm.name)}</h4>
+      <span class="mute" style="font-size:.82rem">Velocity ${PLATFORMS.map(pl=>`${pl} <b style="color:var(--ink)">${n2(tvel(tm,pl))} SP</b>`).join(" · ")} per 100 days</span></div></div>
+      <div class="savs">${tm.members.map(m=>`<span class="sav ${isPlanned(m.role)?"in":"out"}" title="${esc(m.role)}${platOf(m.role)?" · "+esc(platOf(m.role)):""}"><span class="mav">${ini(m.name)}</span><span class="tx">${esc(m.name)}<small>${esc(m.role)}</small></span></span>`).join("")||'<span class="mute">No members</span>'}</div></div>`;
+    body=`<h2>Ready to go</h2><p class="help">A quick check before you start planning. Anything here can be changed later from the menu.</p>
+    <div class="panel"><div class="fsec">Name</div><div class="artline"><b>${esc(a.name)}</b></div></div>
+    <div class="panel"><div class="fsec">Roles</div><div class="rbadges">${sortedRoles().map(r=>`<span class="rbadge ${r.planned?"in":"out"}${r.planned&&!r.platform?" warnp":""}" title="${r.planned?"Included in planning":"Excluded from planning"}">${esc(r.name)}<small>${r.planned?(r.platform?esc(r.platform):"pick a platform"):"&nbsp;"}</small></span>`).join("")}</div></div>
+    <div class="panel"><div class="fsec">Teams</div><div style="margin-top:10px">${a.teams.map(teamBlock).join("")}</div></div>
+    <div class="panel"><div class="fsec">Feature types</div><div class="schips" style="margin-top:10px">${a.ftypes.map(x=>typeTag(a,x.name)).join("")}</div></div>`;
+    next=true;nextLabel="Finish setup";
+  }
+  return `<div style="max-width:720px;margin:0 auto"><h1>${S.done?"Add Agile Release Train":"PI Planner"}</h1><p class="mute">${S.done?"Set it up in five short steps.":"Plan Program Increments with real team availability."}</p>
+  <div class="steps" aria-label="Step ${n} of 5">${[1,2,3,4,5].map(i=>`<span class="${i<=n?"on":""}"></span>`).join("")}</div>
+  <div style="margin:16px 0">${body}</div>
+  <div class="row" style="justify-content:space-between">
+    <div class="row" style="margin:0"><button data-act="back" ${n===1?"disabled":""}>Back</button>${S.done?`<button class="ghost" data-act="cancelWizard">Cancel</button>`:""}</div>
+    <button class="primary" data-act="next" ${next?"":"disabled"}>${nextLabel}</button></div></div>`;
+}
+
+function capacityView(){
+  const ms=scopeTeams().flatMap(t=>t.members),pi=curPI();
+  if(!ms.length||!pi)return `<div class="empty">Add team members to see availability.</div>`;
+  const sp=piSprints(pi),all=sp.flat(),starts=new Set(sp.map(s=>s[0]));
+  const cap=(list,days)=>({a:list.reduce((x,m)=>x+sum(m.id,days),0),w:list.reduce((x,m)=>x+work(m.id,days),0)});
+  const pct=c=>c.w?Math.round(c.a/c.w*100):0;
+  const roles=A().roles.map(r=>r.name).filter(r=>ms.some(m=>m.role===r));
+  const tone=q=>q>=80?"good":q>=60?"warn":"bad";
+  const kpi=(label,list,key,big)=>{const c=cap(list,all),pc=pct(c);return `<div class="kpi" role="button" tabindex="0" data-act="openModal" data-m="role" data-id="${key}" aria-label="Availability details for ${esc(label)}"><div class="kt" title="${label}">${label}</div><div class="mute">${list.length} ${list.length===1?"person":"people"}</div><div class="num">${n2(c.a)}<span class="mute" style="font-size:.85rem;font-weight:400"> / ${c.w} days</span></div><div class="barrow t-${tone(pc)}"><div class="bar"><i style="width:${pc}%"></i></div><b>${pc}%</b></div><div class="spark">${sp.map((d,i)=>{const s=cap(list,d),q=s.w?Math.round(s.a/s.w*100):0;return `<div class="sc t-${tone(q)}" title="Sprint ${i+1}: ${n2(s.a)} of ${s.w} days — ${q}%"><b class="pc">${q}%</b><i style="height:${Math.max(4,Math.round(q*.42))}px"></i><span>S${i+1}</span></div>`}).join("")}</div></div>`};
+  const tip=x=>`<span class="info" tabindex="0" role="note" aria-label="${x}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip">${x}</span></span>`;
+  const inPlan=ms.filter(m=>isPlanned(m.role)),outPlan=ms.filter(m=>!isPlanned(m.role));
+  const noPlat=A().roles.filter(r=>r.planned&&!r.platform&&ms.some(m=>m.role===r.name));
+  const warn=noPlat.length?`<div class="empty" style="text-align:left;margin-bottom:12px;border-color:var(--warn);color:var(--ink)"><b>${noPlat.map(r=>esc(r.name)).join(", ")}</b> ${noPlat.length===1?"counts":"count"} in planning but ${noPlat.length===1?"has":"have"} no platform, so ${noPlat.length===1?"its":"their"} days are left out of the forecast. Set a platform under Roles.</div>`:"";
+  const stats=`<div class="head"><h3>Availability overview ${tip("Sprint bars show the percentage of days available in that sprint. Days in "+esc(pi.name)+". Roles that count in planning are set per role under Roles. Green is 80% or more, orange 60% or more, red below. Select a card for details by sprint, team and role.")}</h3></div>
+  <div class="kpis">${kpi("Everyone",ms,"__all",true)}${inPlan.length?kpi("Included in planning",inPlan,"__planned"):""}${outPlan.length?kpi("Excluded from planning",outPlan,"__unplanned"):""}${PLATFORMS.map(pl=>{const g=ms.filter(m=>platOf(m.role)===pl);return g.length?kpi(pl,g,"__plat:"+pl):"";}).join("")}</div>`;
+  const pal=`<div class="brush" role="radiogroup" aria-label="Brush"><span class="mute">Brush</span>
+  <button role="radio" aria-checked="${ui.paint==="cycle"}" class="sw0${ui.paint==="cycle"?" on":""}" data-act="paint" data-v="cycle" title="Cycle: click a day to step through the values" aria-label="Cycle values"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.5-4M4 13a8 8 0 0 0 14.5 4M5 3v4h4M19 21v-4h-4"/></svg></button>
+  ${VALS.map(v=>`<button role="radio" aria-checked="${ui.paint===String(v)}" class="sw0 ${vcls(v)}${ui.paint===String(v)?" on":""}" data-act="paint" data-v="${v}" title="Set a day to ${v}">${vlabel(v)}</button>`).join("")}</div>`;
+  const gf=ui.gf=Object.assign({},GF0,ui.gf),groupRoles=roles.filter(r=>(gf.group==="all"||(gf.group==="planned")===isPlanned(r))&&(gf.platform==="all"||platOf(r)===gf.platform)),role=groupRoles.includes(gf.role)?gf.role:"all";
+  const gsp=gf.sprint!=="all"&&sp[+gf.sprint]?[sp[+gf.sprint]]:sp,gall=gsp.flat();
+  const passes=m=>(gf.group==="all"||(gf.group==="planned")===isPlanned(m.role))&&(gf.platform==="all"||platOf(m.role)===gf.platform)&&(role==="all"||m.role===role)&&(!gf.absent||sum(m.id,gall)<work(m.id,gall));
+  const filtered=gf.group!=="all"||gf.platform!=="all"||role!=="all"||gf.sprint!=="all"||gf.absent;
+  const filt=`<div class="fbar"><label class="pill"><span>Planning</span><select data-f="gf.group" aria-label="Filter by planning group">${[["all","Everyone"],["unplanned","Excluded from planning"],["planned","Included in planning"]].map(([k,l])=>`<option value="${k}"${gf.group===k?" selected":""}>${l}</option>`).join("")}</select></label>
+  <label class="pill"><span>Platform</span><select data-f="gf.platform" aria-label="Filter by platform"><option value="all">All platforms</option>${PLATFORMS.map(pl=>`<option${gf.platform===pl?" selected":""}>${pl}</option>`).join("")}</select></label>
+  <label class="pill"><span>Role</span><select data-f="gf.role" aria-label="Filter by role"><option value="all">All roles</option>${groupRoles.map(r=>`<option value="${esc(r)}"${r===role?" selected":""}>${esc(r)}</option>`).join("")}</select></label>
+  <label class="pill"><span>Sprint</span><select data-f="gf.sprint" aria-label="Filter by sprint"><option value="all">All sprints</option>${sp.map((d,i)=>`<option value="${i}"${String(gf.sprint)===String(i)?" selected":""}>Sprint ${i+1}</option>`).join("")}</select></label>
+  <label class="fsw"><span class="sw"><input type="checkbox" data-f="gf.absent" ${gf.absent?"checked":""} aria-label="Only members with absences"><span class="knob"></span></span>Only with absences</label>
+  ${filtered?`<button class="ghost" data-act="gfReset">Clear filters</button>`:""}</div>`;
+  GRID={days:gall,passes};
+  const rows=scopeTeams().map(t=>({t,ms:t.members.filter(passes)})).filter(g=>g.ms.length).map(({t,ms:tm})=>{
+    const c=cap(tm,gall);
+    return `<tr><td class="sticky tnm"><span class="in">${esc(t.name)} <span class="mute" style="font-weight:400">${n2(c.a)} / ${c.w}</span><button class="ghost icon rst" data-act="ask" data-k="resetAvail" data-id="${t.id}" title="Reset availability of ${esc(t.name)}" aria-label="Reset availability of ${esc(t.name)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.5-4M4 13a8 8 0 0 0 14.5 4M5 3v4h4M19 21v-4h-4"/></svg></button></span></td><td colspan="${gall.length}"></td></tr>`+
+    tm.map(m=>`<tr><td class="sticky nm"><div class="nmi"><button class="av" data-act="openModal" data-m="member" data-id="${m.id}" title="Availability details for ${esc(m.name)}" aria-label="Availability details for ${esc(m.name)}">${esc(initials(m.name))}</button><div class="nmt">${esc(m.name)}<small>${esc(m.role)}</small></div><b title="Available days in the shown period">${n2(sum(m.id,gall))}</b></div></td>${gall.map(d=>{
+      const cl=closedFor(t.id,d),v=getA(m.id,d);
+      return `<td class="${starts.has(d)?"sb":""}"><button class="c ${cl?"cl":vcls(v)}" data-act="cell" data-m="${m.id}" data-date="${d}" ${cl?"disabled":""} title="${esc(m.name)}, ${wd(d)} ${fmt(d)}${cl?" - "+esc(cl.name):""}" aria-label="${esc(m.name)} ${fmt(d)}: ${cl?"day off":v}">${cl?"":vlabel(v)}</button></td>`}).join("")}</tr>`).join("");}).join("");
+  const grid=`<div class="panel"><div class="head"><h3>Daily availability <span class="info" tabindex="0" role="note" aria-label="Hatched days are public holidays or team days off. Untouched days count as 1."><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip">Hatched days are public holidays or team days off. Untouched days count as 1.</span></span></h3>${pal}</div>${filt}
+  <div class="scroll"><table class="grid"><tr><th class="sticky"></th>${gsp.map(d=>`<th class="sp" colspan="${d.length}">Sprint ${sp.indexOf(d)+1} <span class="mute" style="font-weight:400">${fmt(d[0])}</span></th>`).join("")}</tr>
+  <tr><th class="sticky mute">${gf.sprint==="all"?"Member (total)":"Member (sprint total)"}</th>${gall.map(d=>`<th class="dh ${starts.has(d)?"sb":""}" title="${wd(d)} ${fmt(d)}">${wd(d)[0]}<br>${+d.slice(8)}</th>`).join("")}</tr>${rows}</table>${rows?"":`<div class="empty" style="margin-top:10px">No members match these filters.</div>`}</div></div>`;
+  return warn+stats+grid;
+}
+
+function offSection(p){
+  const nm=s=>s==="all"?"All teams (public holiday)":(A().teams.find(t=>t.id===s)||{name:"Removed team"}).name;
+  const end=piEnd(p);
+  const list=(p.off||[]).slice().sort((a,b)=>a.from.localeCompare(b.from));
+  return `<div style="border-top:1px solid var(--line);margin-top:18px;padding-top:16px"><h3>Days off in this Program Increment</h3>
+  <p class="mute">Public holidays apply to all teams, team days off to one team. Dates are limited to ${fmt(p.start)} to ${fmt(end)}.</p>
+  ${list.length?`<div class="scroll"><table>${list.map(o=>`<tr><td>${esc(o.name)}</td><td>${fmt(o.from)}${o.to!==o.from?" to "+fmt(o.to):""}</td><td class="mute">${esc(nm(o.scope))}</td><td>${askBtn("off",o.id)}</td></tr>`).join("")}</table></div>`:`<p class="empty">No days off yet.</p>`}
+  <form data-form="off" data-id="${p.id}" class="row" style="align-items:flex-end"><label class="f" style="flex:1 1 200px">Name<input name="name" placeholder="e.g. Easter Monday"></label>
+  <label class="f">From<input type="date" name="from" min="${p.start}" max="${end}"></label><label class="f">To (optional)<input type="date" name="to" min="${p.start}" max="${end}"></label>
+  <label class="f">Applies to<select name="scope"><option value="all">All teams (public holiday)</option>${A().teams.map(t=>`<option value="${t.id}">${esc(t.name)} only</option>`).join("")}</select></label>
+  <button class="primary">Add days off</button></form></div>`;
+}
+
+function teamsView(){
+  const a=A();
+  const ms=allMembers();
+  return `<div class="row"><span class="grow mute">${a.teams.length} ${a.teams.length===1?"team":"teams"}, ${ms.length} ${ms.length===1?"member":"members"}</span><button class="primary" data-act="openModal" data-m="newTeam">Add team</button></div>
+  ${a.teams.map(t=>`<section class="tsec"><div class="secrow"><div><h3>${esc(t.name)} <span class="mute" style="font-weight:600">(${t.members.length})</span></h3>
+  <div class="vchips"><span class="mute" style="font-size:.78rem;align-self:center">Velocity</span>${PLATFORMS.map(pl=>`<span class="vchip">${pl} <b>${n2(tvel(t,pl))} SP</b></span>`).join("")}</div></div>
+  <div class="acts"><button data-act="openModal" data-m="team" data-id="${t.id}">${PEN}Edit</button>${askBtn("team",t.id,TRASH+"Delete")}</div></div>
+  <div class="mcards">${sortedMembers(t.members).map(m=>memberCard(m,t.id)).join("")}
+  <button class="mcard add" data-act="openModal" data-m="member-edit" data-id="new:${t.id}">+ Add member</button></div></section>`).join("")||'<div class="empty">No teams yet.</div>'}`;
+}
+
+const XBTN='<button class="icon xclose" data-act="closeModal" title="Close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+function statKit(){
+  const pi=curPI(),sp=piSprints(pi),all=sp.flat();
+  const cap=(ms,days)=>({a:ms.reduce((x,m)=>x+sum(m.id,days),0),w:ms.reduce((x,m)=>x+work(m.id,days),0)});
+  const pc=c=>c.w?Math.round(c.a/c.w*100):0;
+  const tone=q=>q>=80?"good":q>=60?"warn":"bad";
+  const ini=n=>esc(initials(n));
+  const card=(badge,title,sub,c,o)=>{const q=o?o.q:pc(c),n=o?o.a:c.a,d=o?o.w:c.w,tn=o?o.tone:tone(q);return `<div class="rc${badge?"":" nb"} t-${tn}">${badge?`<span class="rb">${badge}</span>`:""}<div class="rt"><b>${title}</b><small>${sub}</small></div><div class="rn"><b>${q}%</b><small>${n2(n)} / ${d} days</small></div><div class="rbar"><div class="bar"><i style="width:${q}%"></i></div></div></div>`};
+  const hero=(list,sub)=>{const c=cap(list,all),q=pc(c);return `<div class="hero"><h3>Availability</h3><div class="mute" style="font-size:.85rem;margin-top:2px">${sub}</div><div class="num">${n2(c.a)}<span class="mute" style="font-size:.9rem;font-weight:400"> / ${c.w} days</span></div>
+    <div class="barrow t-${tone(q)}" style="margin-top:10px"><div class="bar"><i style="width:${q}%"></i></div><b>${q}%</b></div></div>`;};
+  return {pi,sp,all,cap,pc,tone,ini,card,hero};
+}
+function statSections(K,list,withTabs){
+  const {sp,all,cap,tone,card,ini,hero}=K;
+  const tot=cap(list,all),off=all.length*list.length-tot.w;
+  const top=hero(list,`${list.length} ${list.length===1?"person":"people"}${off?` · excludes ${off} ${off===1?"day":"days"} off from public holidays and team days off`:""}`);
+  const sprints=`<div class="rlist">${sp.map((d,i)=>card("","Sprint "+(i+1),fmt(d[0])+" to "+fmt(d[d.length-1]),cap(list,d))).join("")}</div>`;
+  if(!withTabs)return top+`<div class="sub">By sprint</div>`+sprints;
+  const tab=ui.statTab||"sprint";
+  const group=(name,ms,subFn)=>`<div class="tgroup">${card("",esc(name),ms.length+(ms.length===1?" person":" people"),cap(ms,all))}<div class="rlist inner">${ms.map(m=>card(ini(m.name),esc(m.name),esc(subFn(m)),cap([m],all))).join("")}</div></div>`;
+  let content=sprints;
+  if(tab==="team")content=scopeTeams().map(t=>({t,ms:list.filter(m=>m.tid===t.id)})).filter(g=>g.ms.length).map(g=>group(g.t.name,g.ms,m=>m.role)).join("");
+  else if(tab==="role")content=A().roles.map(r=>({r,ms:list.filter(m=>m.role===r.name)})).filter(g=>g.ms.length).map(g=>group(g.r.name,g.ms,m=>m.team)).join("");
+  else if(tab==="platform")content=[...PLATFORMS,""].map(pl=>({pl,ms:list.filter(m=>platOf(m.role)===pl)})).filter(g=>g.ms.length).map(g=>group(g.pl||"Other roles",g.ms,m=>m.role)).join("");
+  return top+`<div class="tabs" role="tablist" style="margin-top:20px">${[["sprint","By sprint"],["team","By team"],["platform","By platform"],["role","By role"]].map(([k,l])=>`<button role="tab" aria-selected="${tab===k}" class="${tab===k?"on":""}" data-act="statTab" data-k="${k}">${l}</button>`).join("")}</div><div style="margin-top:12px">${content}</div>`;
+}
+function roleStats(role){
+  const K=statKit();if(!K.pi)return "";
+  const everyone=role.startsWith("__"),a=A(),teams=scopeTeams();
+  const list=teams.flatMap(t=>t.members.filter(m=>role==="__all"||(role==="__planned"?isPlanned(m.role):role==="__unplanned"?!isPlanned(m.role):role.startsWith("__plat:")?platOf(m.role)===role.slice(7):m.role===role)).map(m=>({...m,team:t.name,tid:t.id})));
+  const scope=ui.team!=="all"&&teams.length===1?teams[0].name:"All teams";
+  return XBTN+`<div class="rhead"><h2>${{__all:"Everyone",__planned:"Included in planning",__unplanned:"Excluded from planning"}[role]||(role.startsWith("__plat:")?esc(role.slice(7)):esc(role))}</h2><div class="chips2">${list.map(m=>`<span class="mchip"><span class="mav">${K.ini(m.name)}</span>${esc(m.name)}</span>`).join("")}</div></div>
+  <p class="mute" style="margin:8px 0 0">${esc(a.name)} · ${esc(K.pi.name)} · ${esc(scope)}</p>`+statSections(K,list,true);
+}
+function memberStats(id){
+  const K=statKit();if(!K.pi)return "";
+  let m=null,tm=null;A().teams.forEach(t=>t.members.forEach(x=>{if(x.id===id){m=x;tm=t;}}));if(!m)return "";
+  return XBTN+`<div class="rhead"><span class="mav big">${K.ini(m.name)}</span><h2>${esc(m.name)}</h2><div class="chips2"><span class="mchip plain">${esc(m.role)}</span><span class="mchip plain">${esc(tm.name)}</span></div></div>
+  <p class="mute" style="margin:8px 0 0">${esc(A().name)} · ${esc(K.pi.name)}</p>`+statSections(K,[{...m,tid:tm.id}],false);
+}
+
+function piModalForm(id){
+  const a=A(),x=id&&id!=="new"?a.pis.find(p=>p.id===id):null,v=x||{name:"",start:nextPIStart(a),sprints:5,weeks:2};
+  const form=`<form data-form="pi" data-id="${x?x.id:""}" class="ff">
+    <label class="f">Name or number<input name="name" value="${esc(v.name)}" data-autofocus placeholder="e.g. 2026.4"></label>
+    <label class="f">Start date<input type="date" name="start" value="${esc(v.start)}"></label>
+    <div class="ff2"><label class="f">Number of sprints<input type="number" name="sprints" min="1" max="12" value="${v.sprints}"></label><label class="f">Sprint length (weeks)<input type="number" name="weeks" min="1" max="4" value="${v.weeks}"></label></div>
+    <p class="mute" style="margin:0;font-size:.8rem">Working days are Monday to Friday. The start date moves to the Monday of that week.</p>
+    <div class="row" style="justify-content:flex-end;margin-top:8px"><button type="button" data-act="closeModal">Cancel</button><button class="primary">${x?"Save":"Add Program Increment"}</button></div></form>`;
+  if(!x)return `<h2 style="margin-bottom:14px">Add Program Increment</h2>`+form;
+  const tab=ui.piTab||"details";
+  const tabs=`<div class="tabs" role="tablist">${[["details","Details"],["off","Days off"]].map(([k,l])=>`<button role="tab" aria-selected="${tab===k}" class="${tab===k?"on":""}" data-act="piTab" data-k="${k}">${l}</button>`).join("")}</div>`;
+  const body=tab==="off"?`<div class="nob">${offSection(x)}</div>`:form;
+  return `<h2 style="margin-bottom:12px">Edit Program Increment <span class="mute" style="font-weight:600">${esc(x.name)}</span></h2>${tabs}<div style="margin-top:14px">${body}</div>${tab==="details"?"":`<div class="row" style="justify-content:flex-end;margin-top:14px"><button class="primary" data-act="closeModal">Done</button></div>`}`;
+}
+function modalView(){
+  const m=ui.modal;if(!m)return "";
+  let inner="";
+  if(m.type==="art")inner=`<h2>Rename Agile Release Train</h2><div class="row"><input data-f="art.name" value="${esc(A().name)}" aria-label="Agile Release Train name" data-autofocus></div>`;
+  else if(m.type==="pi")inner=piModalForm(m.id);
+  else if(m.type==="ask"){const [h,txt]=askText(m.kind,m.id);inner=`<h2>${h}</h2><p class="mute">${txt}</p><div class="row" style="justify-content:flex-end;margin-top:16px"><button data-act="askNo">Cancel</button><button class="primary" data-act="askYes" style="background:var(--danger);border-color:var(--danger);color:#fff">${m.kind==="resetAvail"?"Reset":"Delete"}</button></div>`;}
+  else if(m.type==="feature")inner=featureForm(m.id);
+  else if(m.type==="role")inner=roleStats(m.id);
+  else if(m.type==="member")inner=memberStats(m.id);
+  else if(m.type==="member-edit")inner=memberForm(m.id);
+  else if(m.type==="role-edit")inner=roleForm(m.id);
+  else if(m.type==="newTeam")inner=`<h2>Add team</h2><form data-form="newTeam" class="row"><input name="name" placeholder="Team name" data-autofocus><button class="primary">Create team</button></form>`;
+  else{const t=A().teams.find(t=>t.id===m.id);if(!t){ui.modal=null;return "";}inner=`<h2 style="margin-bottom:14px">Edit team</h2>${teamEditor(t,false,true)}`;}
+  return `<div class="scrim" data-act="closeModal"><div class="modal${(["role","member"].includes(m.type)||(m.type==="pi"&&m.id!=="new"))?" wide":""}" role="dialog" aria-modal="true">${inner}${["role","member","member-edit","role-edit","feature","pi","ask"].includes(m.type)?"":`<div class="row" style="justify-content:flex-end"><button class="primary" data-act="closeModal">Done</button></div>`}</div></div>`;
+}
+
+const PALETTES=[["forest","Forest","#0f7b5f"],["ocean","Ocean","#11639e"],["violet","Violet","#6b45c6"],["amber","Amber","#a8651a"],["rose","Rose","#b43a62"],["slate","Slate","#3f5365"]];
+function applyTheme(){const th=ui.theme||"system",pa=ui.palette||"forest";const r=document.documentElement;
+  if(th==="system")r.removeAttribute("data-theme");else r.setAttribute("data-theme",th);
+  if(pa==="forest")r.removeAttribute("data-palette");else r.setAttribute("data-palette",pa);}
+const ICO={"system": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"12\" rx=\"2\"/><path d=\"M8 20h8M12 16v4\"/>", "light": "<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4\"/>", "dark": "<path d=\"M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z\"/>"};
+function menuBtn(){
+  return `<button class="icon" data-act="menu" title="Menu" aria-label="Open menu" aria-expanded="${ui.menu}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>`;
+}
+function navView(){
+  if(!ui.menu)return "";
+  const th=ui.theme||"system";
+  const arts=S.arts.map(x=>{
+    const cur=x.id===S.artId,pis=[...x.pis].sort((p,q)=>p.start.localeCompare(q.start));
+    return `<div class="ngrp${cur?" cur":""}"><div class="nart">
+      <span class="nm" title="${esc(x.name||"Unnamed train")}">${esc(x.name||"Unnamed train")}</span>
+      <button class="ghost icon" data-act="editArt" data-id="${x.id}" title="Edit Agile Release Train" aria-label="Edit ${esc(x.name)}">${PEN}</button>
+      <button class="ghost icon danger" data-act="ask" data-k="art" data-id="${x.id}" title="Delete Agile Release Train" aria-label="Delete ${esc(x.name)}">${TRASH}</button></div>
+      <div class="npis">${pis.map(p=>`<div class="npi${cur&&curPI()&&p.id===curPI().id?" on":""}">
+        <span class="nm" role="button" tabindex="0" data-act="pickPI" data-id="${p.id}" data-art="${x.id}" style="cursor:pointer"><b>${esc(p.name)}</b><small>${fmt(p.start)} – ${fmt(piEnd(p))} · ${p.sprints} sprints</small></span>
+        <button class="ghost icon" data-act="editPI" data-id="${p.id}" data-art="${x.id}" title="Edit Program Increment" aria-label="Edit ${esc(p.name)}">${PEN}</button>
+        <button class="ghost icon danger" data-act="askPI" data-id="${p.id}" data-art="${x.id}" title="Delete Program Increment" aria-label="Delete ${esc(p.name)}">${TRASH}</button></div>`).join("")||`<p class="nempty">No Program Increments yet.</p>`}<button class="nadd" data-act="newPI" data-art="${x.id}">+ Add Program Increment</button></div></div>`;}).join("");
+  const palRow=`<div class="pal" role="radiogroup" aria-label="Colour palette">${PALETTES.map(([k,l,c])=>`<button role="radio" aria-checked="${(ui.palette||"forest")===k}" class="${(ui.palette||"forest")===k?"on":""}" data-act="setPal" data-v="${k}" title="${l}" aria-label="${l}" style="--sw:${c}"></button>`).join("")}</div>`;
+  const thRow=`<div class="thsw" role="radiogroup" aria-label="Theme">${["system","light","dark"].map(k=>`<button role="radio" aria-checked="${th===k}" class="${th===k?"on":""}" data-act="setTheme" data-v="${k}" title="${k[0].toUpperCase()+k.slice(1)}" aria-label="${k} theme"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg></button>`).join("")}</div>`;
+  return `<div class="mscrim" data-act="closeMenu"></div><nav class="nav" aria-label="Main menu">
+  <div class="nhd"><div class="nbrand"><svg class="mark" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--blue)"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="13" fill="url(#lg)"/><rect x="11" y="27" width="6.5" height="10" rx="3.25" fill="#fff" opacity=".92"/><rect x="20.75" y="19" width="6.5" height="18" rx="3.25" fill="#fff" opacity=".96"/><rect x="30.5" y="11" width="6.5" height="26" rx="3.25" fill="#fff"/></svg><div><h2>PI Planner</h2><p>Know what your train can carry.</p></div></div>
+  <button class="icon" data-act="closeMenu" title="Close" aria-label="Close menu" style="position:absolute;top:12px;right:12px">${XSVG}</button></div>
+  <div class="nbody"><div class="nsec">Agile Release Trains</div>${arts}
+  <button class="nadd art" data-act="addArt">+ Add Agile Release Train</button></div>
+  <div class="nftr"><div class="nsec">Appearance</div>${palRow}<div style="margin-top:10px">${thRow}</div>
+  <p class="nft" style="border:0;padding:10px 2px 0;margin:0">Everything is stored in this browser only.</p></div></nav>`;
+
+}
+const MARK='<svg class="brandmark" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--blue)"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="13" fill="url(#lg2)"/><rect x="11" y="27" width="6.5" height="10" rx="3.25" fill="#fff" opacity=".92"/><rect x="20.75" y="19" width="6.5" height="18" rx="3.25" fill="#fff" opacity=".96"/><rect x="30.5" y="11" width="6.5" height="26" rx="3.25" fill="#fff"/></svg>';
+const BRAND=`<span class="brand">${MARK}<span>PI&nbsp;Planner</span></span>`;
+const brandWith=a=>`<span class="brand">${MARK}<span>PI&nbsp;Planner<small class="bart" title="${esc(a.name)}">${esc(a.name)}</small></span></span>`;
+function appbar(){
+  if(!S.done||ui.wizard)return BRAND;
+  const a=A(),pi=curPI(),opt=(v,l,s)=>`<option value="${v}"${s?" selected":""}>${esc(l)}</option>`;
+  const piInfo=pi?`<span class="hpi" title="${fmt(pi.start)} to ${fmt(piEnd(pi))} · ${pi.sprints} sprints"><b>${esc(pi.name)}</b><small>${sd(pi.start)}–${sd(piEnd(pi))}</small></span>`:`<span class="hpi mute"><b>No Program Increment yet</b></span>`;
+  const team=pi?`<label class="pill team"><span>Team</span><select data-f="ctx.team" aria-label="Team you are managing">${opt("all","All teams",ui.team==="all")}${a.teams.map(x=>opt(x.id,x.name,x.id===ui.team)).join("")}</select></label>`:"";
+  return `${menuBtn()}${brandWith(a)}<span class="hsep"></span><span class="hctx"><span class="artm">${esc(a.name)}</span>${piInfo}</span><span class="sp"></span><span class="ctxrow">${team}</span>`;
+}
+
+function setupModal(){
+  const a=A(),tabs=[["general","General"],["roles","Roles"],["teams","Teams"],["ftypes","Feature types"]];
+  const body=ui.setupTab==="teams"?teamsView():ui.setupTab==="roles"?rolesView():ui.setupTab==="ftypes"?typesView():
+  `<div class="panel"><label class="f">Name<input data-f="art.name" value="${esc(a.name)}"></label></div>
+   <div class="panel"><div class="secrow"><div><h3>Delete this Agile Release Train</h3><span class="mute" style="font-size:.85rem">Removes its roles, teams, Program Increments and availability.</span></div>
+   ${askBtn("art","",`${TRASH}Delete this train`,"danger acts-b")}</div></div>`;
+  return `<div class="scrim" data-act="closeSetup"><div class="modal wide" role="dialog" aria-modal="true" aria-label="Edit Agile Release Train">
+  <div class="head" style="margin-bottom:14px"><h2>Edit Agile Release Train <span class="mute" style="font-weight:600">${esc(a.name)}</span></h2>
+  <button class="icon" data-act="closeSetup" title="Close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button class="${ui.setupTab===k?"on":""}" data-act="setupTab" data-k="${k}">${l}</button>`).join("")}</div>
+  <div style="margin-top:14px">${body}</div></div></div>`;
+}
+
+const num=v=>{if(v==null)return null;const n=parseFloat(String(v).replace(",","."));return isNaN(n)?null:n;};
+function planDaysIn(days,tm,pl){const ms=tm.members.filter(m=>isPlanned(m.role)&&(pl==null||platOf(m.role)===pl));return ms.reduce((x,m)=>x+sum(m.id,days),0);}
+function planDays(pi,tm,pl){const days=piSprints(pi).flat(),ms=tm.members.filter(m=>isPlanned(m.role)&&(pl==null||platOf(m.role)===pl));return {a:ms.reduce((x,m)=>x+sum(m.id,days),0),w:ms.reduce((x,m)=>x+work(m.id,days),0)};}
+function planStats(){
+  const a=A(),pi=curPI(),past=a.pis.filter(p=>p!==pi&&p.start<pi.start).sort((x,y)=>x.start.localeCompare(y.start)),rows=[];
+  scopeTeams().forEach(tm=>PLATFORMS.forEach(pl=>{
+    const has=tm.members.some(m=>isPlanned(m.role)&&platOf(m.role)===pl),fs=pi.features.filter(f=>f.team===tm.id);
+    if(!has&&!fs.some(f=>fpts(f,pl)>0))return;
+    const vals=past.map(p=>nvel(p,tm,pl)).filter(v=>v!=null);
+    const hist=vals.length?vals.reduce((x,y)=>x+y,0)/vals.length:null,tv=tvel(tm,pl),rate=hist!=null?hist:tv,pd=planDays(pi,tm,pl).a,pts=f=>fpts(f,pl);
+    rows.push({t:tm,pl,n:vals.length,hist,tv,rate,pd,basis:hist!=null?"history":"default",fc:rate*pd/100,
+      committed:fs.filter(f=>f.status==="Committed").reduce((x,f)=>x+pts(f),0),total:fs.reduce((x,f)=>x+pts(f),0)});
+  }));
+  return {pi,past,rows};
+}let ftDraft=null;
+const ftMembers=(tid,pls)=>{const tm=A().teams.find(x=>x.id===tid);return tm?tm.members.filter(m=>isPlanned(m.role)&&pls.includes(platOf(m.role))):[];};
+function ftSPHtml(){
+  const d=ftDraft,pls=PLATFORMS.filter(p=>d.platforms.includes(p)),val=x=>esc(x!=null?x:"");
+  if(!pls.length)return `<p class="mute" style="margin:0;font-size:.85rem">Select a platform under Delivered by to estimate and track its story points.</p>`;
+  return `<div class="ftp-list">${pls.map(pl=>`<div class="ftp"><div class="ftp-h"><b>${pl}</b></div><div class="ff2"><label class="f">Estimated<input inputmode="decimal" placeholder="0" value="${val(d.pts[pl])}" data-ft="pts" data-pl="${pl}" aria-label="Estimated story points ${pl}"></label><label class="f">Delivered<input inputmode="decimal" placeholder="–" value="${val(d.del[pl])}" data-ft="del" data-pl="${pl}" aria-label="Delivered story points ${pl}"></label></div></div>`).join("")}</div>`;
+}
+function evenMap(d){
+  const out={};
+  PLATFORMS.filter(p=>d.platforms.includes(p)).forEach(pl=>{
+    const ids=ftMembers(d.team,[pl]).filter(m=>d.who.includes(m.id)).map(m=>m.id),n=ids.length;if(!n)return;
+    const base=Math.floor(1000/n)/10;let acc=0;
+    ids.forEach((id,i)=>{if(i<n-1){out[id]=base;acc+=base;}else out[id]=Math.round((100-acc)*10)/10;});
+  });
+  return out;
+}
+function wsumHtml(){
+  const d=ftDraft,rows=[];
+  d.platforms.forEach(pl=>{
+    let w=0,any=false;
+    ftMembers(d.team,[pl]).filter(m=>d.who.includes(m.id)).forEach(m=>{const n=num(d.wt[m.id]);if(n>0){w+=n;any=true;}});
+    if(!any)return;
+    w=Math.round(w*10)/10;
+    if(w===100)rows.push(`<div class="wsum ok">${pl}: 100% weighted.</div>`);
+    else if(w<100)rows.push(`<div class="wsum warn">${pl}: ${n2(w)}% weighted. The remaining ${n2(Math.round((100-w)*10)/10)}% is planned on assigned people without a weight, or on everyone of that platform.</div>`);
+    else rows.push(`<div class="wsum warn">${pl}: ${n2(w)}% weighted, more than 100%. The weights are what gets planned.</div>`);
+  });
+  if(d.manual&&d.who.length)rows.push(`<button type="button" class="ghost" data-ft="even" style="margin-top:4px">Split evenly</button>`);
+  return rows.join("");
+}
+function syncWt(){
+  const d=ftDraft;
+  document.querySelectorAll("#ft-who .asgrow").forEach(row=>{
+    const cb=row.querySelector('input[name="who"]'),wi=row.querySelector(".asgw");if(!cb||!wi)return;
+    wi.disabled=!cb.checked;
+    if(document.activeElement!==wi){const v=cb.checked?d.wt[wi.dataset.id]:null;wi.value=v==null?"":v;}
+  });
+  const ws=document.getElementById("ft-wsum");if(ws)ws.innerHTML=wsumHtml();
+}
+function ftWhoHtml(){
+  const d=ftDraft,note=x=>`<p class="mute" style="margin:0;font-size:.8rem">${x}</p>`;
+  if(!d.platforms.length)return note("Select a platform above to see its members.");
+  const ms=ftMembers(d.team,d.platforms);
+  if(!ms.length)return note("This team has no members included in planning on the selected platforms yet.");
+  const val=x=>esc(x!=null?x:"");
+  return ms.map(m=>{const on=d.who.includes(m.id);return `<div class="asgi asgrow"><label class="asgl"><input type="checkbox" name="who" value="${m.id}" ${on?"checked":""}><span class="mav">${esc(initials(m.name))}</span><span class="tx"><b>${esc(m.name)}</b><small>${esc(m.role)}</small></span></label><input class="asgw" inputmode="decimal" placeholder="0" value="${on?val(d.wt[m.id]):""}" data-ft="wt" data-id="${m.id}" aria-label="Share of ${esc(m.name)} in percent"${on?"":" disabled"}><span class="asgp">%</span></div>`;}).join("")+`<div id="ft-wsum" style="grid-column:1/-1">${wsumHtml()}</div>`;
+}
+function featureForm(id){
+  const a=A(),pi=curPI(),ts=scopeTeams(),f=id&&id!=="new"?pi.features.find(x=>x.id===id):null;
+  const v=f||{name:"",team:(ts.length===1?ts[0]:a.teams[0]).id,type:(a.ftypes[0]||{}).name||"",size:"M",status:"New",spill:false,platforms:[],pts:{},del:{},who:[],wt:{}};
+  const key=f?f.id:"new";
+  if(!ftDraft||ftDraft.key!==key){ftDraft={key,team:v.team,platforms:(v.platforms||[]).slice(),pts:Object.assign({},v.pts),del:Object.assign({},v.del),who:(v.who||[]).slice(),wt:Object.assign({},v.wt),manual:false};
+    const em=evenMap(ftDraft);
+    if(!Object.keys(ftDraft.wt).length)ftDraft.wt=em;
+    else ftDraft.manual=[...new Set([...Object.keys(em),...Object.keys(ftDraft.wt)])].some(id=>Math.abs((num(em[id])||0)-(num(ftDraft.wt[id])||0))>0.05);}
+  const d=ftDraft;
+  const opt=(arr,s)=>arr.map(x=>`<option${x===s?" selected":""}>${esc(x)}</option>`).join("");
+  return `<h2 style="margin-bottom:14px">${f?"Edit feature":"Add feature"}</h2>
+  <form data-form="feature" data-id="${f?f.id:""}" class="ff">
+    <div class="fsec">Details</div>
+    <label class="f">Name<input name="name" value="${esc(v.name)}" data-autofocus></label>
+    <div class="ff2"><label class="f">Team<select name="team">${a.teams.map(t=>`<option value="${t.id}"${t.id===d.team?" selected":""}>${esc(t.name)}</option>`).join("")}</select></label>
+    <label class="f">Type<select name="type">${opt(a.ftypes.map(x=>x.name),v.type)}</select></label></div>
+    <div class="ff2"><label class="f">Size<select name="size">${opt(SIZES,v.size)}</select></label>
+    <label class="f">Status<select name="status">${opt(STATUSES,v.status)}</select></label></div>
+    <label class="fsw" style="margin:2px 0"><span class="sw"><input type="checkbox" name="spill" ${v.spill?"checked":""}><span class="knob"></span></span>Spillover</label>
+    <div class="fsec" style="margin-top:10px">Delivered by ${itip("Select the platforms working on this feature, then pick who delivers it from the team selected above. Only members of the selected platforms are shown, and their availability per sprint decides when it can finish on the Plan board. Each person gets a share of the platform's estimate, split evenly by default. Change the percentages when the work is not shared equally; per platform they should add up to 100%. The Plan board then places each person's share against their own capacity.")}</div>
+    <div class="ft-plats" id="ft-plats">${PLATFORMS.map(pl=>{const on=d.platforms.includes(pl);return `<label class="ft-chip${on?" on":""}"><input type="checkbox" data-ft="plat" value="${pl}"${on?" checked":""}>${pl}</label>`;}).join("")}</div><div id="ft-err"></div>
+    <div class="asg" id="ft-who">${ftWhoHtml()}</div>
+    <div class="fsec" style="margin-top:10px">Story Points ${itip("Estimated points count against each platform's forecast. Delivered points are what was really delivered and feed the velocity of this Program Increment. Leave Delivered empty until you know it: empty is not the same as 0.")}</div>
+    <div id="ft-sp">${ftSPHtml()}</div>
+    <div class="row" style="justify-content:space-between;margin-top:12px">${f?`<button type="button" class="ghost danger" data-act="ask" data-k="feature" data-id="${f.id}">Delete</button>`:"<span></span>"}
+    <div class="row" style="margin:0"><button type="button" data-act="closeModal">Cancel</button><button class="primary">${f?"Save":"Add feature"}</button></div></div>
+  </form>`;
+}
+
+function groupChart(cats,series,avgLines){
+  if(!cats.length)return "";
+  const W=560,H=176,L=32,R=avgLines?44:10,T=14,B=46,iw=W-L-R,ih=H-T-B,n=series.length;
+  const avgs=avgLines?series.map(s=>{const v=s.vals.filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}):[];
+  const vals=series.flatMap(s=>s.vals).filter(v=>v!=null),max=Math.max(1,...vals,...avgs.filter(v=>v!=null))*1.18,step=iw/cats.length,gw=Math.min(step*.82,n*30),bw=gw/n,y=v=>T+ih-(v/max)*ih;
+  const grid=[0,.5,1].map(f=>{const v=max/1.15*f;return `<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${Math.round(v)}</text>`}).join("")+`<text x="${L-6}" y="${T-2}" text-anchor="end">SP</text>`;
+  const bars=cats.map((c,k)=>{const x0=L+step*k+(step-gw)/2;return series.map((s,j)=>{const v=s.vals[k];if(v==null)return "";const x=x0+bw*j,top=y(v);
+    return `<rect class="${s.cls}" x="${x+1}" y="${top}" width="${Math.max(2,bw-2)}" height="${Math.max(0,T+ih-top)}" rx="3"><title>${esc(s.name)}: ${n2(v)}</title></rect>${bw>=18?`<text class="val sm" x="${x+bw/2}" y="${top-3}" text-anchor="middle">${n2(v)}</text>`:""}`}).join("")+`<text x="${L+step*k+step/2}" y="${T+ih+16}" text-anchor="middle">${esc(c.length>12?c.slice(0,11)+"…":c)}</text>`}).join("");
+  const lines=avgLines?series.map((s,j)=>{const v=avgs[j];if(v==null)return "";return `<line class="${s.cls} avgl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"><title>${esc(s.name)} average: ${n2(v)}</title></line><text class="${s.cls} avgt" x="${W-R+4}" y="${y(v)+3.5}">${n2(v)}</text>`}).join(""):"";
+  const lw=series.map(s=>13+s.name.length*6.2+16),tw=lw.reduce((a,b)=>a+b,0)-16;
+  let lx=(W-tw)/2;
+  const legend=series.map((s,j)=>{const x=lx;lx+=lw[j];return `<rect class="${s.cls}" x="${x}" y="${H-13}" width="9" height="9" rx="2"/><text x="${x+13}" y="${H-5}">${esc(s.name)}</text>`}).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grouped bar chart">${grid}${lines}${bars}${legend}</svg>`;
+}
+function buildPlan(ps,pi,teams){
+  const sp=piSprints(pi),order={Committed:0,Uncommitted:1,New:2};
+  const rateOf=(tm,pl)=>{const row=ps.rows.find(r=>r.t.id===tm.id&&r.pl===pl);return row?row.rate:tvel(tm,pl);};
+  // every planning member carries their own capacity per sprint, from their own availability
+  const mcap={},mleft={},pool={};
+  teams.forEach(tm=>{
+    PLATFORMS.forEach(pl=>pool[tm.id+"|"+pl]=[]);
+    tm.members.forEach(m=>{
+      const pl=platOf(m.role);
+      if(!isPlanned(m.role)||!PLATFORMS.includes(pl))return;
+      mcap[m.id]=sp.map(d=>rateOf(tm,pl)*sum(m.id,d)/100);
+      mleft[m.id]=mcap[m.id].slice();
+      pool[tm.id+"|"+pl].push(m.id);
+    });
+  });
+  const capOf=(tid,pl,i,src)=>(pool[tid+"|"+pl]||[]).reduce((x,id)=>x+(src[id]||[])[i],0);
+  const cap={},left={};
+  teams.forEach(tm=>PLATFORMS.forEach(pl=>{
+    cap[tm.id+"|"+pl]=sp.map((_,i)=>capOf(tm.id,pl,i,mcap));
+  }));
+  const cols=sp.map(()=>[]),over=[],short={};
+  const EPS=1e-6;
+  teams.forEach(tm=>{
+    const fs=pi.features.filter(f=>f.team===tm.id).slice().sort((x,y)=>(order[x.status]??3)-(order[y.status]??3));
+    fs.forEach(f=>{
+      let last=-1,fits=true,work=false;
+      const used=sp.map(()=>new Set());
+      // take `amount` SP from these people's remaining capacity, sprint by sprint; returns what did not fit
+      const place=(ids,amount)=>{
+        let need=amount;
+        for(let i=0;i<sp.length&&need>EPS;i++){
+          for(const id of ids){
+            if(need<=EPS)break;
+            const avail=mleft[id][i];if(avail<=0)continue;
+            const use=Math.min(avail,need);mleft[id][i]-=use;need-=use;last=Math.max(last,i);used[i].add(id);
+          }
+        }
+        return need>EPS?need:0;
+      };
+      PLATFORMS.forEach(pl=>{
+        const est=fpts(f,pl),poolIds=pool[tm.id+"|"+pl]||[];
+        if(!est)return;
+        const share=id=>est*num(f.wt[id])/100;
+        const wIds=(f.who||[]).filter(id=>poolIds.includes(id)&&num((f.wt||{})[id])>0);
+        const wSum=wIds.reduce((x,id)=>x+share(id),0);
+        work=true;
+        // 1. weighted people carry their own share on their own capacity
+        wIds.forEach(id=>{const rem=place([id],share(id));if(rem){fits=false;short[id]=(short[id]||0)+rem;}});
+        // 2. what is not weighted: assigned people without a weight, else everyone of the platform
+        const rest=est-wSum;
+        if(rest>EPS){
+          const free=(f.who||[]).filter(id=>poolIds.includes(id)&&!wIds.includes(id));
+          const ids=free.length?free:poolIds;
+          if(!ids.length)fits=false;else if(place(ids,rest))fits=false;
+        }
+      });
+      if(!work){cols[0].push({f,tm,who:null});return;}
+      if(fits&&last>=0)used.forEach((s,i)=>{if(i<=last&&s.size)cols[i].push({f,tm,who:[...s],part:i<last});});
+      else over.push({f,tm});
+    });
+  });
+  teams.forEach(tm=>PLATFORMS.forEach(pl=>{
+    left[tm.id+"|"+pl]=sp.map((_,i)=>capOf(tm.id,pl,i,mleft));
+  }));
+  return {sp,cap,left,cols,over,mcap,mleft,short};
+}
+function planningView(){
+  const a=A(),pi=curPI(),teams=scopeTeams(),ps=planStats();
+  const feats=pi.features.filter(f=>teams.some(t=>t.id===f.team));
+  const tgt=ps.rows.reduce((x,r)=>x+r.fc,0),com=ps.rows.reduce((x,r)=>x+r.committed,0);
+  const SP=v=>`${n2(v)} <span class="unit">SP</span>`;
+  const tip=x=>`<span class="info" tabindex="0" role="note" aria-label="${x}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip">${x}</span></span>`;
+  const tagB=r=>r.basis==="history"?`<span class="tag" title="Average of ${r.n} earlier Program Increment${r.n===1?"":"s"}">Average</span>`:`<span class="tag off" title="The team's default velocity">Default</span>`;
+  const SER=[["Overall",null,"s0"],...PLATFORMS.map((pl,i)=>[pl,pl,"s"+(i+1)])];
+  const scope=teams.length===1?teams[0]:null,vTeams=scope?[scope]:teams;
+  const vRate=pl=>{const rs=ps.rows.filter(r=>r.pl===pl&&vTeams.some(t2=>t2.id===r.t.id));if(!rs.length)return null;const d=rs.reduce((x,r)=>x+r.pd,0);return {v:d?rs.reduce((x,r)=>x+r.rate*r.pd,0)/d:rs.reduce((x,r)=>x+r.rate,0)/rs.length,hist:rs.every(r=>r.basis==="history"),some:rs.some(r=>r.basis==="history"),n:Math.max(...rs.map(r=>r.n))};};
+  const pastN=ps.past.filter(p=>hasDeliv(p,vTeams,null));
+  const lastP=pastN[pastN.length-1];
+  const vAll=(()=>{const rs=ps.rows.filter(r=>vTeams.some(t2=>t2.id===r.t.id)),d=rs.reduce((x,r)=>x+r.pd,0);return d?rs.reduce((x,r)=>x+r.rate*r.pd,0)/d:(rs.length?rs.reduce((x,r)=>x+r.rate,0)/rs.length:0);})();
+  const vcard=(label,val,txt)=>`<div class="tile"><div class="mute">${label}${txt?" "+tip(txt):""}</div><div class="bignum">${val==null?'<span class="mute">n/a</span>':SP(val)}</div></div>`;
+  const tiles=`<div class="tiles">${vcard("Overall",vAll,"Story points delivered per 100 planning days, across all platforms. The average of every earlier Program Increment that has delivered story points; without history the team default is used.")}${PLATFORMS.map(pl=>{const o=vRate(pl);return vcard(pl,o&&o.v,`Story points delivered per 100 planning days of ${pl} roles. The average of every earlier Program Increment with delivered ${pl} story points; without history the team default is used.`);}).join("")}</div>`;
+  const block=(tms,label,tbl)=>{
+    const pp=ps.past.filter(p=>hasDeliv(p,tms,null)),cats=pp.map(p=>p.name),mk=fn=>SER.map(([n,pl,c])=>({name:n,cls:c,vals:pp.map(p=>fn(p,tms,pl))}));
+    const rs=tbl?ps.rows.filter(r=>r.t.id===tbl.id):[];
+    const table=rs.length?`<div style="margin-top:10px" class="scroll"><table class="vt fx vtab"><colgroup><col style="width:110px"><col></colgroup><tr><th>Platform</th><th title="Story points (SP) per 100 days">Velocity</th></tr>${rs.map(r=>`<tr><td>${r.pl}</td><td><b>${n2(r.rate)}</b> ${tagB(r)}</td></tr>`).join("")}</table></div>`:"";
+    const charts=pp.length?`<div class="chart"><h4>Historical velocity ${tip("Story points (SP) delivered per 100 days of planning days, so Program Increments of different lengths and availability can be compared. The dashed lines are the averages used for this one's forecast, overall and per platform.")}</h4>${groupChart(cats,mk(nvel),true)}</div>`:(tbl?`<div class="empty" style="margin:8px 0">No delivered story points recorded yet. Add them as Delivered on the features of earlier Program Increments.</div>`:"");
+    return `<div class="tghead">${esc(label)}</div>`+charts+table;
+  };
+  const details=`<div style="margin-top:6px">${teams.map(tm=>block([tm],tm.name,tm)).join("")}</div>`;
+  const s1=`<div class="panel"><div class="head"><h3><span class="step">1</span>Velocity ${tip("Velocity is always normalised to story points per 100 days of the days that count in planning, so Program Increments of different lengths and availability can be compared. The cards show the velocity used for this Program Increment's forecast: the average of all earlier Program Increments that have delivered story points, or the team default.")}</h3></div>
+  ${tiles}${details}</div>`;
+
+  const fpill=(c,f)=>{const q=f?Math.round(c/f*100):0,tn=q>100?"bad":q>=90?"warn":q>0?"good":"none",st=q>100?"over":q>=100?"done":"";
+    return `<span class="spc ${st} t-${tn}" title="${n2(c)} SP committed of ${n2(f)} SP forecast (${q}%)"><span class="mini"><i style="width:${Math.min(100,q)}%"></i></span><span class="dv">${n2(c)}</span><span class="mute">/</span><span class="pv">${n2(f)}</span></span>`;};
+  const frow=r=>`<tr><td>${r.pl}</td><td>${n2(r.rate)}</td><td>${n2(r.pd)}</td><td>${fpill(r.committed,r.fc)}</td></tr>`;
+  const fcPl=pl=>ps.rows.filter(r=>r.pl===pl).reduce((x,r)=>x+r.fc,0);
+  const comPl=pl=>ps.rows.filter(r=>r.pl===pl).reduce((x,r)=>x+r.committed,0);
+  const ftile=(label,d,f,tipTxt)=>{const q=f?Math.round(d/f*100):0,tn=q>100?"bad":q>=90?"warn":"good";
+    return `<div class="tile"><div class="mute">${label}${tipTxt?" "+tip(tipTxt):""}</div>
+    <div class="bignum">${SP(f)}</div>
+    <div class="barrow t-${tn}" style="margin-top:10px"><div class="bar"><i style="width:${Math.min(100,q)}%"></i></div><b>${q}%</b></div></div>`;};
+  const plTiles=PLATFORMS.filter(pl=>ps.rows.some(r=>r.pl===pl)).map(pl=>ftile(pl,comPl(pl),fcPl(pl),`How many ${pl} story points you can take on: ${pl} velocity × ${pl} planning days ÷ 100. The bar shows how much of it is already committed.`)).join("");
+  const s2=`<div class="panel"><div class="head"><h3><span class="step">2</span>Forecast ${tip("Forecast = velocity × planning days available this Program Increment ÷ 100. The days come from the Availability tab: only roles that count in planning, after leave and days off. It is the number of story points (SP) you can reasonably commit to, in total and per platform. The cards show committed of forecast: how much of it is already booked with features that have the status Committed.")}</h3></div>
+  <div class="tiles">${ftile("Overall",com,tgt,"How many story points you can take on this Program Increment: velocity × planning days ÷ 100, across all platforms. The bar shows how much of it is already committed.")}${plTiles}</div>
+  ${teams.map(tm=>{const rs=ps.rows.filter(r=>r.t.id===tm.id);return rs.length?`<div class="tghead">${esc(tm.name)}</div><div class="scroll"><table class="vt fx ptab"><colgroup><col style="width:110px"><col><col><col style="width:160px"></colgroup><tr><th>Platform</th><th>Velocity</th><th>Planning days</th><th title="Story points committed of the forecast">Forecast</th></tr>${rs.map(frow).join("")}</table></div>`:"";}).join("")}</div>`;
+
+  const grp=s=>{const g=s?feats.filter(f=>f.status===s):feats;return {n:g.length,p:g.reduce((x,f)=>x+ftotal(f),0),d:g.reduce((x,f)=>x+fdelT(f),0)};};
+  const card=(l,g,txt)=>{const q=g.p?Math.min(100,Math.round(g.d/g.p*100)):0,tn=!g.p?"none":q>=80?"good":q>=50?"warn":q>0?"bad":"none";
+    return `<div class="tile"><div class="mute">${l}${txt?" "+tip(txt):""}</div><div class="bignum">${SP(g.p)}</div>
+    <div class="barrow t-${tn}" style="margin-top:10px" title="${g.n} ${g.n===1?"feature":"features"} · ${q}% delivered"><div class="bar"><i style="width:${q}%"></i></div><b>${q}%</b></div></div>`;};
+  const ratio=(d,p)=>{
+    if(!d&&!p)return '<span class="mute">–</span>';
+    const q=p?Math.min(100,Math.round(d/p*100)):0,st=!p?"zero":q>=100?"done":q>0?"part":"",tn=q>=100?"good":q>=80?"good":q>=50?"warn":q>0?"bad":"none";
+    return `<span class="spc ${st} t-${tn}" title="${n2(d)} SP delivered of ${n2(p)} SP estimated">${p?`<span class="mini"><i style="width:${q}%"></i></span>`:""}<span class="dv">${n2(d)}</span><span class="mute">/</span><span class="pv">${n2(p)}</span></span>`;};
+  const teamName=f=>(a.teams.find(x=>x.id===f.team)||{}).name||"";
+  const srt=ui.fsort||{},cmp={team:(x,y)=>teamName(x).localeCompare(teamName(y)),name:(x,y)=>x.name.localeCompare(y.name),type:(x,y)=>String(x.type).localeCompare(String(y.type)),
+    size:(x,y)=>SIZES.indexOf(x.size)-SIZES.indexOf(y.size),status:(x,y)=>STATUSES.indexOf(x.status)-STATUSES.indexOf(y.status),spill:(x,y)=>Number(!!x.spill)-Number(!!y.spill)};
+  const cf=srt.key&&srt.key.startsWith("pl:")?(x,y)=>fpts(x,srt.key.slice(3))-fpts(y,srt.key.slice(3)):cmp[srt.key],shown=cf?[...feats].sort((x,y)=>(srt.dir==="desc"?-1:1)*cf(x,y)):feats;
+  const th=(k,l,right)=>`<th${right?' style="text-align:right"':""} aria-sort="${srt.key===k?(srt.dir==="desc"?"descending":"ascending"):"none"}"><button class="sorth${srt.key===k?" on":""}" data-act="fsort" data-k="${k}" title="Sort by ${l.toLowerCase()}">${l}<span class="arr">${srt.key===k?(srt.dir==="desc"?"▼":"▲"):"↕"}</span></button></th>`;
+  const rowActs=f=>`<td style="width:88px"><div class="rowacts"><button class="ghost icon" data-act="openModal" data-m="feature" data-id="${f.id}" title="Edit feature" aria-label="Edit ${esc(f.name)}">${PEN}</button><button class="ghost icon danger" data-act="ask" data-k="feature" data-id="${f.id}" title="Delete feature" aria-label="Delete ${esc(f.name)}">${TRASH}</button></div></td>`;
+  const s3=`<div class="panel"><div class="head"><h3><span class="step">3</span>Features ${tip("The Frontend and Backend columns show delivered of estimated story points (SP), with a small bar for progress. For example 0/50 means nothing delivered yet of 50 SP estimated.")}</h3>
+  <button class="primary" data-act="openModal" data-m="feature" data-id="new">Add feature</button></div>
+  <div class="tiles">${card("Overall",grp(),"Story points estimated for every feature of the selected teams, added up over all platforms. The bar shows how much of it is delivered.")}${card("Committed",grp("Committed"),"Features with the status Committed, the ones you promised for this Program Increment. Their estimated points count against the forecast. The bar shows how much of it is delivered.")}${card("Uncommitted",grp("Uncommitted"),"Features with the status Uncommitted: planned as stretch work, so they do not count against the forecast. The bar shows how much of it is delivered.")}${card("New",grp("New"),"Features with the status New: added but not yet decided on, so they do not count against the forecast. The bar shows how much of it is delivered.")}</div>
+  ${feats.length?teams.map(tm=>{const g=shown.filter(f=>f.team===tm.id);return g.length?`<div class="tghead">${esc(tm.name)}</div><div class="scroll"><table class="vt fx ftab"><colgroup><col><col style="width:120px"><col style="width:120px"><col style="width:64px">${PLATFORMS.map(()=>'<col style="width:110px">').join("")}<col style="width:118px"><col style="width:92px"></colgroup><tr>${th("name","Feature")}${th("type","Type")}${th("status","Status")}${th("size","Size")}${PLATFORMS.map(pl=>th("pl:"+pl,pl,true)).join("")}<th>People</th><th></th></tr>${g.map(f=>`<tr><td title="${esc(f.name)}"><b>${esc(f.name)}</b>${f.spill?' <span class="tag warn" title="Spillover from a previous Program Increment">Spillover</span>':""}${wtInfo(a,f).some(x=>x.diff!==0)?' <span class="tag warn" title="'+esc(wtInfo(a,f).filter(x=>x.diff!==0).map(x=>x.pl+': '+n2(x.w)+'% weighted').join(' · '))+'">Check weights</span>':""}</td><td>${typeTag(a,f.type)}</td><td><span class="tag${f.status==="Committed"?"":" off"}">${esc(f.status)}</span></td><td>${esc(f.size)}</td>${PLATFORMS.map(pl=>`<td style="text-align:right">${ratio(fdel(f,pl),fpts(f,pl))}</td>`).join("")}<td>${whoStack(fAsg(a,f),5,f.wt)||'<span class="mute">\u2013</span>'}</td>${rowActs(f)}</tr>`).join("")}</table></div>`:"";}).join(""):`<div class="empty" style="margin-top:12px">No features yet. Add the first feature you want to plan in this Program Increment.</div>`}</div>`;
+  const pl4=buildPlan(ps,pi,teams);
+  const colCard=({f,tm,who,part})=>{const ms=who?tm.members.filter(m=>who.includes(m.id)):fAsg(a,f);return `<div class="pcard ${esc(f.status)}${part?" part":""}" role="button" tabindex="0" data-act="openModal" data-m="feature" data-id="${f.id}" title="${esc(f.status)} · ${esc(tm.name)}${part?" · continues in a later sprint":""}"><b>${esc(f.name)}</b><small>${teams.length>1?esc(tm.name)+" · ":""}${PLATFORMS.filter(p2=>fpts(f,p2)).map(p2=>`${p2} ${n2(fpts(f,p2))}`).join(" · ")||"no points"}</small><div class="pfoot">${typeTag(a,f.type)}${whoStack(ms,4,f.wt)}</div></div>`;};
+  const colCaps=i=>PLATFORMS.map(p2=>{
+    const c=teams.reduce((x,tm)=>x+(pl4.cap[tm.id+"|"+p2]||[])[i],0),l=teams.reduce((x,tm)=>x+(pl4.left[tm.id+"|"+p2]||[])[i],0);
+    if(!c)return "";const used=c-l,q=Math.round(used/c*100),tn=!used?"none":q>=100?"bad":q>=90?"warn":"good";
+    return `<div class="cap t-${tn}" title="${p2}: ${used?n2(used)+" of "+n2(c)+" SP planned in this sprint":"nothing planned in this sprint ("+n2(c)+" SP capacity)"}"><span>${p2}</span><span class="bar"><i style="width:${Math.min(100,q)}%"></i></span><span>${q}%</span></div>`;}).join("");
+  const lcell=(u,c)=>{if(!c&&!u)return '<span class="mute">\u2013</span>';const q=c?Math.round(u/c*100):0,tn=!u?"none":q>=100?"bad":q>=90?"warn":"good";
+    return `<span class="spc t-${tn}" title="${n2(u)} SP planned of ${n2(c)} SP capacity (${q}%)"><span class="mini"><i style="width:${Math.min(100,q)}%"></i></span><span class="dv">${n2(u)}</span><span class="mute">/</span><span class="pv">${n2(c)}</span></span>`;};
+  const loadTeam=tm=>{
+    const rows=tm.members.filter(m=>pl4.mcap[m.id]).map(m=>{const c=pl4.mcap[m.id],used=c.map((x,i)=>x-pl4.mleft[m.id][i]),sh=pl4.short[m.id]||0;return {m,c,used,sh,tot:used.reduce((x,y)=>x+y,0)};}).filter(r=>r.tot>1e-6||r.sh>1e-6);
+    if(!rows.length)return "";
+    return `<div class="tghead">${esc(tm.name)}</div><div class="scroll"><table class="vt fx ltab"><colgroup><col style="width:200px">${pl4.sp.map(()=>'<col style="width:136px">').join("")}<col style="width:120px"></colgroup><tr><th>Person</th>${pl4.sp.map((_,i)=>`<th>Sprint ${i+1}</th>`).join("")}<th>Over</th></tr>${rows.map(r=>`<tr><td title="${esc(r.m.name)} · ${esc(r.m.role)}"><div class="nmi"><span class="av">${esc(initials(r.m.name))}</span><div class="nmt">${esc(r.m.name)}<small>${esc(r.m.role)}</small></div></div></td>${r.c.map((c,i)=>`<td>${lcell(r.used[i],c)}</td>`).join("")}<td>${r.sh>1e-6?`<span class="tag bad" title="${n2(r.sh)} SP of this person's share does not fit in this Program Increment">${n2(r.sh)} SP over</span>`:'<span class="mute">\u2013</span>'}</td></tr>`).join("")}</table></div>`;};
+  const loadHtml=teams.map(loadTeam).join("");
+  const s4=`<div class="panel"><div class="head"><h3><span class="step">4</span>Plan ${tip("Each feature is shown in every sprint where someone works on it: dotted border in the earlier sprints, solid border in the sprint where it finishes. The avatars show who spends capacity on it in that sprint. Features are filled in priority order, Committed first. Capacity is counted per person: their available days in that sprint × their team velocity ÷ 100. When a feature has weights, each person's share (a percentage of the platform's estimate) is planned on their own capacity, so several people can work on it in parallel. Whatever is not weighted is taken from the assigned people without a weight, or from everyone of that platform in the team when nobody is assigned. A feature finishes in the last sprint any of its platforms needs, and what no longer fits lands in \"Beyond this Program Increment\". The bar under each sprint shows how much of that sprint's capacity is booked per platform: green below 90%, orange from 90%, red when the sprint is fully booked (100%), and grey when nothing is planned. Work is planned from the first sprint onward, so once everything fits the later sprints stay empty.")}</h3></div>
+  <div class="board">${pl4.sp.map((d,i)=>`<div class="col"><div class="colhd"><b>Sprint ${i+1}</b><small>${fmt(d[0])} – ${fmt(d[d.length-1])}</small><div class="caps">${colCaps(i)||'<span class="colempty">No capacity</span>'}</div></div>
+    ${pl4.cols[i].map(colCard).join("")||'<div class="colempty">Nothing planned here</div>'}</div>`).join("")}
+    ${pl4.over.length?`<div class="col over"><div class="colhd"><b>Beyond this Program Increment</b><small>Does not fit the forecast</small></div>${pl4.over.map(colCard).join("")}</div>`:""}</div>
+  ${loadHtml?`<div class="fsec" style="margin-top:18px">Load per person ${tip("How much of each person's capacity is planned in each sprint, in story points (SP): planned / capacity. Capacity is their available days × team velocity ÷ 100. Green below 90%, orange from 90%, red when the sprint is fully booked. The Over column shows the part of a person's weighted share that does not fit in this Program Increment, so that feature lands in Beyond this Program Increment.")}</div>${loadHtml}`:""}</div>`;
+  return s1+s2+s3+s4;
+}
+
+function planView(){
+  const a=A(),pi=curPI(),hasMembers=a.teams.some(x=>x.members.length);
+  const tabs=`<div class="tabs full" role="tablist">${[["availability","Availability"],["planning","Planning"]].map(([k,l])=>`<button role="tab" aria-selected="${ui.mainTab===k}" class="${ui.mainTab===k?"on":""}" data-act="mainTab" data-k="${k}">${l}</button>`).join("")}</div>`;
+  let body;
+  if(!pi)body=`<div class="empty" style="padding:56px 20px"><h2 style="margin-bottom:8px;color:var(--ink)">Add your first Program Increment</h2><p style="margin:0 0 16px">A Program Increment is the period you plan availability and features for.</p><button class="primary" data-act="openModal" data-m="pi" data-id="new">Add first Program Increment</button></div>`;
+  else if(!hasMembers)body=`<div class="empty">This train needs a team with members. <button data-act="setup">Open settings</button></div>`;
+  else body=ui.mainTab==="planning"?planningView():capacityView();
+  return (pi?tabs:"")+body;
+}
+
+function render(){
+  applyTheme();
+  if(!S.done&&!A()){const id=uid();S.arts.push({id,name:"",teams:[],pis:[],off:[],roles:[]});S.artId=id;}
+  ensureRoles(A());
+  if(!A().pis.find(p=>p.id===S.piId))S.piId=A().pis[0]&&A().pis[0].id;
+  if(ui.team!=="all"&&!A().teams.find(x=>x.id===ui.team))ui.team="all";
+  TEAM_OF={};A().teams.forEach(t=>t.members.forEach(m=>TEAM_OF[m.id]=t.id));
+  const y=window.scrollY;
+  document.getElementById("app").innerHTML=S.done&&!ui.wizard?planView()+navView()+(ui.view==="setup"?setupModal():"")+modalView():wizard()+modalView();
+  document.getElementById("bar").innerHTML=appbar();
+  const a=ui.modal?document.querySelector(".modal [data-autofocus]"):document.querySelector("[data-autofocus]");if(a&&(!S.done||ui.modal))a.focus({preventScroll:true});
+  window.scrollTo(0,y);
+  save();
+}
+
+/* ---------- events ---------- */
+let pdT=null;document.addEventListener("pointerdown",e=>{pdT=e.target;},true);
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]");if(!b)return;
+  const {act,id,date,k,v}=b.dataset;
+  if(b.classList.contains("scrim")&&(e.target!==b||(pdT&&pdT!==b)))return;
+    if(!["menu","setTheme","setPal","ask","askNo"].includes(act))ui.menu=false;
+  if(act==="next"){if(ui.step<5)ui.step++;else{S.done=true;S.piId=(A().pis[0]||{}).id||null;ui.wizard=false;ui.view="plan";ui.team="all";ui.step=1;}}
+  else if(act==="back"){ui.step=Math.max(1,ui.step-1);}
+  else if(act==="setupTab"){ui.setupTab=k;}
+  else if(act==="setTheme"){ui.theme=v;}
+  else if(act==="setPal"){ui.palette=v;}
+  else if(act==="menu"){ui.menu=!ui.menu;}
+  else if(act==="editArt"){if(S.artId!==id){S.artId=id;S.piId=null;ui.team="all";}ui.view="setup";ui.menu=false;}
+  else if(act==="addArt"){ui.menu=false;const nid=uid();ui.prevArt=S.artId;S.arts.push({id:nid,name:"",teams:[],pis:[],off:[],roles:[]});S.artId=nid;S.piId=null;ui.step=1;ui.wizard=true;}
+  else if(act==="cancelWizard"){S.arts=S.arts.filter(x=>x.id!==S.artId);S.artId=(S.arts.find(x=>x.id===ui.prevArt)||S.arts[0]).id;S.piId=null;ui.wizard=false;ui.step=1;}
+  else if(act==="gfReset"){ui.gf=Object.assign({},GF0);}
+  else if(act==="fsort"){const c=ui.fsort||{};ui.fsort={key:k,dir:c.key===k&&c.dir==="asc"?"desc":"asc"};}
+  else if(act==="pickPI"){const ar=b.dataset.art;if(ar&&ar!==S.artId){S.artId=ar;ui.team="all";}S.piId=id;ui.modal=null;ui.menu=false;}
+  else if(act==="editPI"){const ar=b.dataset.art;if(ar&&ar!==S.artId){S.artId=ar;S.piId=id;ui.team="all";}ui.modal={type:"pi",id};ui.piTab="details";}
+  else if(act==="askPI"){const ar=b.dataset.art;if(ar&&ar!==S.artId){S.artId=ar;S.piId=id;ui.team="all";}ui.modal={type:"ask",kind:"pi",id,back:null};}
+  else if(act==="newPI"){const ar=b.dataset.art;if(ar&&ar!==S.artId){S.artId=ar;S.piId=null;ui.team="all";}ui.modal={type:"pi",id:"new"};}
+  else if(act==="mainTab"){ui.mainTab=k;}
+  else if(act==="ask"){ui.modal={type:"ask",kind:k,id,back:ui.modal};}
+  else if(act==="askNo"){ui.modal=ui.modal&&ui.modal.back||null;}
+  else if(act==="askYes"){const m=ui.modal||{};doDelete(m.kind,m.id);ui.modal=(m.kind==="off"||(m.kind==="pi"&&A().pis.length))&&m.back?m.back:null;}
+  else if(act==="setup"){ui.view="setup";}
+  else if(act==="plan"||act==="closeSetup"){ui.view="plan";}
+  else if(act==="cell"){const mid=b.dataset.m;if(closedFor(TEAM_OF[mid],date))return;const cur=getA(mid,date);setAvail(mid,date,ui.paint==="cycle"?VALS[(VALS.indexOf(cur)+1)%VALS.length]:+ui.paint);}
+  else if(act==="paint"){ui.paint=v;}
+  else if(act==="openModal"){if(b.dataset.m==="role-edit"&&id==="new")roleDraft=[];if(b.dataset.m==="feature")ftDraft=null;ui.modal={type:b.dataset.m,id};ui.statTab="sprint";ui.piTab="details";}
+  else if(act==="piTab"){ui.piTab=k;}
+  else if(act==="statTab"){ui.statTab=k;}
+  else if(act==="closeModal"){ui.modal=null;}
+  render();
+});
+function clearErr(f){f.querySelectorAll(".err").forEach(x=>x.remove());f.querySelectorAll(".invalid").forEach(x=>x.classList.remove("invalid"));}
+function showErr(el,msg){
+  if(!el)return;
+  const host=el.closest("label,.f,.row,div")||el.parentElement;
+  el.classList.add("invalid");
+  const s=document.createElement("span");s.className="err";s.textContent=msg;
+  (el.parentElement===host?host:el.parentElement).appendChild(s);
+  el.focus();
+}
+document.addEventListener("submit",e=>{
+  const f=e.target.closest("[data-form]");if(!f)return;
+  e.preventDefault();
+  clearErr(f);
+  if(f.dataset.form==="roleAdd"){
+    if(!raCommit())return;
+    if(!roleDraft.length){raErr("Add at least one role.");const i=document.getElementById("ra-in");if(i)i.focus();return;}
+    const ar=A(),planned=f.elements.planned.checked,platform=planned?f.elements.platform.value:"";
+    roleDraft.forEach(d=>{if(!ar.roles.some(x=>raKey(x.name)===raKey(d.name)))ar.roles.push({id:uid(),name:d.name,planned,platform});});
+    roleDraft=[];ui.modal=null;render();return;
+  }
+  const nameEl=f.elements.name,name=nameEl.value.trim();
+  if(!name){showErr(nameEl,"Please enter a name.");return;}
+  const kind=f.dataset.form;
+  if(kind==="team")addTeam(name);
+  else if(kind==="pi"){const a=A(),el=f.elements,o={name,start:toMonday(el.start.value),sprints:Math.min(12,Math.max(1,parseInt(el.sprints.value)||1)),weeks:Math.min(4,Math.max(1,parseInt(el.weeks.value)||1))},pid=f.dataset.id;
+    if(!o.start){showErr(el.start,"Please pick a start date.");return;}
+    if(pid){Object.assign(a.pis.find(x=>x.id===pid),o);}else{const np={id:uid(),...o,off:[],features:[],velocity:{},velUnit:"md"};a.pis.push(np);S.piId=np.id;}
+    ui.modal=null;}
+  else if(kind==="feature"){const pi=curPI(),el=f.elements,fid=f.dataset.id,d=ftDraft;
+    if(!d||!d.platforms.length){const er=document.getElementById("ft-err");if(er)er.innerHTML='<span class="err">Select at least one platform.</span>';return;}
+    const pls=PLATFORMS.filter(p=>d.platforms.includes(p)),ok=new Set(ftMembers(el.team.value,pls).map(m=>m.id)),o={name,team:el.team.value,type:el.type.value,size:el.size.value,status:el.status.value,spill:el.spill.checked,platforms:pls,who:d.who.filter(x=>ok.has(x)),wt:{},pts:{},del:{}};
+    o.who.forEach(id=>{const n=num(d.wt[id]);if(n!=null&&n>0)o.wt[id]=Math.min(100,n);});o.wtU="pct";
+    pls.forEach(pl=>{const n=num(d.pts[pl]);if(n!=null&&n>0)o.pts[pl]=n;const x=d.del[pl]==null?null:num(d.del[pl]);if(x!=null&&x>=0)o.del[pl]=x;});
+    if(fid){const ft=pi.features.find(x=>x.id===fid);if(ft)Object.assign(ft,o);}else pi.features.push({id:uid(),...o});ftDraft=null;ui.modal=null;}
+  else if(kind==="newTeam"){{const id=addTeam(name);ui.modal={type:"team",id};}}
+  else if(kind==="off"){const pi=A().pis.find(x=>x.id===f.dataset.id),lo=pi.start,hi=piEnd(pi);let a=f.elements.from.value,z=f.elements.to.value||a;if(!a){showErr(f.elements.from,"Please pick a start date.");return;}if(z<a)[a,z]=[z,a];a=a<lo?lo:a;z=z>hi?hi:z;if(a>z){showErr(f.elements.from,"Those dates fall outside this Program Increment.");return;}pi.off.push({id:uid(),name,from:a,to:z,scope:f.elements.scope.value});}
+  else if(kind==="role"){const ar=A(),el=f.elements,rid=f.dataset.id,planned=el.planned.checked,platform=planned?el.platform.value:"";
+    if(ar.roles.some(x=>x.id!==rid&&x.name.toLowerCase()===name.toLowerCase())){showErr(nameEl,"A role with this name already exists.");return;}
+    if(rid){const r=ar.roles.find(x=>x.id===rid);if(r){ar.teams.forEach(tm=>tm.members.forEach(m=>{if(m.role===r.name)m.role=name;}));r.name=name;r.planned=planned;r.platform=platform;}}
+    else ar.roles.push({id:uid(),name,planned,platform});
+    ui.modal=null;}
+  else if(kind==="member"){const tm=A().teams.find(x=>x.id===f.dataset.team),mid=f.dataset.id;
+    if(tm){const role=f.elements.role.value;
+      if(mid){const m=tm.members.find(x=>x.id===mid);if(m){m.name=name;m.role=role;}}
+      else tm.members.push({id:uid(),name,role});}
+    ui.modal=null;}
+  render();
+  const first=document.querySelector(`[data-form="${f.dataset.form}"]${f.dataset.id?`[data-id="${f.dataset.id}"]`:""} input`);if(first)first.focus();
+});
+document.addEventListener("change",e=>{
+  const el=e.target.closest("[data-f]");if(!el)return;
+  const [obj,key]=el.dataset.f.split("."),id=el.dataset.id,v=el.value;
+  if(obj==="roleform"){const w=document.getElementById("platwrap");if(w)w.style.display=el.checked?"":"none";return;}
+  if(obj==="ctx"){ui.team=v;render();return;}
+  if(obj==="gf"){ui.gf=Object.assign({},GF0,ui.gf);ui.gf[key]=key==="absent"?el.checked:v;render();return;}
+  if(obj==="ftype"){
+    const a=A(),r=a.ftypes.find(x=>x.id===id);
+    if(r){const nv=v.trim();
+      if(nv&&nv!==r.name&&!a.ftypes.some(x=>x!==r&&x.name.toLowerCase()===nv.toLowerCase())){a.pis.forEach(p=>p.features.forEach(f=>{if(f.type===r.name)f.type=nv;}));r.name=nv;}
+      else if(nv!==r.name){render();return;}}
+    save();return;}
+  if(obj==="art")A().name=v;
+  else if(obj==="team"){const x=A().teams.find(x=>x.id===id);if(x){if(key==="velocity"){const n=num(v);if(!x.velocity||typeof x.velocity!=="object")x.velocity={};x.velocity[el.dataset.pl]=n==null||n<0?30:n;}else if(v.trim())x.name=v.trim();}}
+  else if(obj==="member"){const m=A().teams.flatMap(x=>x.members).find(m=>m.id===id);if(m){if(key==="role")m.role=v;else if(v.trim())m.name=v.trim();}}
+  save();
+});
+document.addEventListener("input",e=>{
+  const el=e.target;
+  if(el.dataset&&el.dataset.draft==="ftype"){
+    const nv=el.value.trim(),a=A();if(!nv||a.ftypes.some(x=>x.name.toLowerCase()===nv.toLowerCase()))return;
+    const x={id:uid(),name:el.value,c:nextTypeColor(a)};a.ftypes.push(x);
+    const row=el.closest(".draft");el.style.setProperty("--tc","var(--tc"+x.c+")");el.removeAttribute("data-draft");el.dataset.f="ftype.name";el.dataset.id=x.id;row.classList.remove("draft");
+    row.children[1].outerHTML=typeDel(x,0,a.ftypes.length);
+    row.insertAdjacentHTML("afterend",typeDraft());save();return;
+  }
+  const f=el.closest&&el.closest("[data-f]");if(!f)return;
+  if(f.dataset.f==="ftype.name"){const a=A(),r=a.ftypes.find(x=>x.id===f.dataset.id),nv=f.value.trim();
+    if(r&&nv&&!a.pis.some(p=>p.features.some(ft=>ft.type===r.name))&&!a.ftypes.some(x=>x!==r&&x.name.toLowerCase()===nv.toLowerCase())){r.name=nv;save();}return;}
+  if(S.done&&!ui.wizard)return;
+  const b=document.querySelector('[data-act="next"]');
+  if(f.dataset.f==="art.name"){A().name=f.value;if(b)b.disabled=!f.value.trim();}
+});
+document.addEventListener("keydown",e=>{
+  if((e.key==="Enter"||e.key===" ")&&e.target.matches&&e.target.matches(".kpi[data-act],.npi .nm[data-act],.mcard.clickable,.pcard")){e.preventDefault();e.target.click();return;}
+  if(e.key!=="Escape"||!S.done)return;
+  if(ui.modal)ui.modal=null;else if(ui.view==="setup")ui.view="plan";else if(ui.menu)ui.menu=false;else return;render();});
+/* ---------- add roles: badge input ---------- */
+document.addEventListener("mousedown",e=>{if(e.target.closest&&e.target.closest(".ra-sug"))e.preventDefault();});
+document.addEventListener("click",e=>{
+  const t=e.target,b=t.closest&&t.closest("[data-ra]");
+  if(b&&b.dataset.ra==="pick"){const box=document.getElementById("ra-sug"),it=box&&box._items&&box._items[+b.dataset.i];if(it)raPick(it);return;}
+  if(b&&b.dataset.ra==="rm"){roleDraft=roleDraft.filter(d=>d.id!==b.dataset.id);raUI();raSug(false);const i=document.getElementById("ra-in");if(i)i.focus();return;}
+  if(t.closest&&t.closest("#ra-in")){raSug();return;}
+  if(t.closest&&t.closest("#ra-field")){const i=document.getElementById("ra-in");if(i){i.focus();raSug();}return;}
+  if(!(t.closest&&t.closest(".ra-sug")))raSug(false);
+});
+document.addEventListener("input",e=>{
+  const el=e.target;if(!el||el.id!=="ra-in")return;
+  const f=el.closest("form");if(f)clearErr(f);
+  if(el.value.includes(",")){const parts=el.value.split(","),rest=parts.pop();parts.forEach(x=>{el.value=x;raCommit();});el.value=rest;}
+  raHi=0;raSug(el.value.trim()?true:false);
+});
+document.addEventListener("keydown",e=>{
+  const el=e.target;if(!el||el.id!=="ra-in")return;
+  const box=document.getElementById("ra-sug"),items=(box&&!box.hidden&&box._items)||[];
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){
+    e.preventDefault();
+    if(!items.length){raHi=0;raSug();return;}
+    raHi=(raHi+(e.key==="ArrowDown"?1:-1)+items.length)%items.length;raSug();
+    const on=box.querySelector&&box.querySelector(".ra-opt.on");if(on&&on.scrollIntoView)on.scrollIntoView({block:"nearest"});
+  }else if(e.key==="Enter"){
+    if(!el.value.trim())return;
+    e.preventDefault();
+    const it=items.length?items[Math.min(raHi,items.length-1)]:null;
+    if(it)raPick(it);else{if(raCommit())raSug(false);}
+  }else if(e.key==="Escape"&&items.length){
+    e.preventDefault();e.stopPropagation();raSug(false);
+  }else if(e.key==="Backspace"&&!el.value&&roleDraft.length){
+    roleDraft.pop();raUI();raSug(false);
+  }
+},true);
+/* ---------- feature form: platforms, story points, delivered by ---------- */
+document.addEventListener("change",e=>{
+  const el=e.target;if(!el||!ftDraft||!el.closest||!el.closest('form[data-form="feature"]'))return;
+  const d=ftDraft;
+  if(el.dataset&&el.dataset.ft==="plat"){
+    const on=el.checked;d.platforms=PLATFORMS.filter(p=>p===el.value?on:d.platforms.includes(p));
+    const lb=el.closest("label");if(lb)lb.classList.toggle("on",on);
+    const er=document.getElementById("ft-err");if(er)er.innerHTML="";
+    if(!d.manual)d.wt=evenMap(d);document.getElementById("ft-sp").innerHTML=ftSPHtml();document.getElementById("ft-who").innerHTML=ftWhoHtml();
+  }else if(el.name==="team"){d.team=el.value;if(!d.manual)d.wt=evenMap(d);document.getElementById("ft-who").innerHTML=ftWhoHtml();}
+  else if(el.name==="who"){d.who=el.checked?[...new Set([...d.who,el.value])]:d.who.filter(x=>x!==el.value);
+    if(!d.manual)d.wt=evenMap(d);
+    else if(el.checked){const mm=ftMembers(d.team,PLATFORMS).find(x=>x.id===el.value);if(mm){const pl=platOf(mm.role),others=ftMembers(d.team,[pl]).filter(x=>x.id!==el.value&&d.who.includes(x.id)).reduce((s,x)=>s+(num(d.wt[x.id])||0),0),r=Math.round((100-others)*10)/10;d.wt[el.value]=r>0?r:"";}}
+    else delete d.wt[el.value];
+    syncWt();}
+});
+document.addEventListener("click",e=>{
+  const b=e.target&&e.target.closest&&e.target.closest('[data-ft="even"]');if(!b||!ftDraft)return;
+  ftDraft.manual=false;ftDraft.wt=evenMap(ftDraft);syncWt();
+});
+document.addEventListener("input",e=>{
+  const el=e.target;if(!el||!el.dataset||!ftDraft||!el.dataset.ft)return;
+  if(el.dataset.ft==="pts"){ftDraft.pts[el.dataset.pl]=el.value;const ws=document.getElementById("ft-wsum");if(ws)ws.innerHTML=wsumHtml();}
+  else if(el.dataset.ft==="del")ftDraft.del[el.dataset.pl]=el.value;
+  else if(el.dataset.ft==="wt"){ftDraft.wt[el.dataset.id]=el.value;ftDraft.manual=true;const ws=document.getElementById("ft-wsum");if(ws)ws.innerHTML=wsumHtml();}
+});
+render();
+</script>
+</body>
+</html>

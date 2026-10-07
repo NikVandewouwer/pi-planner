@@ -647,3 +647,6 @@ table.fx.ltab td:not(:first-child),table.fx.ltab th:not(:first-child){overflow:v
 .ra-opt small{color:var(--mute);font-size:.75rem;text-align:right}
 .ra-opt.on,.ra-opt:hover{background:var(--soft)}
 .ra-opt.new b{color:var(--accent)}
+.appfoot{margin-top:40px;margin-bottom:-40px;text-align:center;font-size:.78rem;color:var(--mute)}
+.appfoot a{color:inherit;font-variant-numeric:tabular-nums}
+.appfoot a:hover{color:var(--ink)}

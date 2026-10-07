@@ -40,6 +40,18 @@ Every push to `main` runs lint, tests and build in GitHub Actions and publishes 
 
 One-time setup on GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
+## Releasing
+
+The version in `package.json` is shown in the app footer, next to the commit the build came from. Bump it with [SemVer](https://semver.org) when you ship to `main`:
+
+```sh
+npm run release:patch   # 1.2.3 -> 1.2.4  bug fixes
+npm run release:minor   # 1.2.3 -> 1.3.0  new features, backwards compatible
+npm run release:major   # 1.2.3 -> 2.0.0  breaking changes (e.g. data that older versions can't read)
+```
+
+Each command runs lint and tests, bumps the version, commits "Release vX.Y.Z", tags it `vX.Y.Z` and pushes to `main`, which deploys. Commit your changes first: it refuses to run with uncommitted changes. In VS Code: **Terminal → Run Task → release …**.
+
 ## Moving data from the old single-file version
 
 The old `PI Planner.html` has no export button. Open it in the browser where your data lives, open the developer console and run:

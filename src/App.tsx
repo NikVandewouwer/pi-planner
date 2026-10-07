@@ -65,6 +65,21 @@ function useEscape() {
   }, [])
 }
 
+function Footer() {
+  const commitUrl = __APP_REPO__ && __APP_COMMIT__ ? `${__APP_REPO__}/commit/${__APP_COMMIT__}` : ''
+  return (
+    <footer className="appfoot">
+      PI Planner v{__APP_VERSION__}
+      {__APP_COMMIT__ && (
+        <>
+          {' · '}
+          {commitUrl ? <a href={commitUrl} target="_blank" rel="noreferrer" title="Commit this build was made from">{__APP_COMMIT__}</a> : __APP_COMMIT__}
+        </>
+      )}
+    </footer>
+  )
+}
+
 export default function App() {
   const S = useData()
   const ui = useUI()
@@ -88,6 +103,7 @@ export default function App() {
             <ModalView />
           </>
         )}
+        <Footer />
       </div>
     </>
   )

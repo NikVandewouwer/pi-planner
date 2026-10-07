@@ -168,8 +168,12 @@ export function MemberForm({ id }: { id: string }) {
   const [err, setErr] = useState<string | null>(null)
   let m: Member | null = null
   let tm: Team | undefined
-  if (id.startsWith('new:')) tm = a.teams.find((x) => x.id === id.slice(4))
-  else { const f = model.findMember(id); if (f) { m = f.m; tm = f.tm } }
+  if (id.startsWith('new:')) {
+    const t = a.teams.find((x) => x.id === id.slice(4))
+    return t ? <MemberAddForm team={t} /> : null
+  }
+  const f = model.findMember(id)
+  if (f) { m = f.m; tm = f.tm }
   if (!tm) return null
   const team = tm
   const submit = (e: FormEvent<HTMLFormElement>) => {
@@ -203,6 +207,110 @@ export function MemberForm({ id }: { id: string }) {
             <button type="button" onClick={closeModal}>Cancel</button>
             <button className="primary">{m ? 'Save' : 'Add member'}</button>
           </div>
+        </div>
+      </form>
+    </>
+  )
+}
+
+/** Add several members with the same role at once: each name becomes a chip (Tab, Enter or comma). */
+function MemberAddForm({ team }: { team: Team }) {
+  const a = useArt()
+  const [draft, setDraft] = useState<{ id: string; name: string }[]>([])
+  const [text, setText] = useState('')
+  const [err, setErr] = useState<string | null>(null)
+  const inRef = useRef<HTMLInputElement>(null)
+
+  const key = (s: string) => s.trim().toLowerCase()
+  /** Turns raw text into a chip. Returns the new draft, or null when the name is already taken. */
+  const commitText = (raw: string, d = draft): typeof draft | null => {
+    const t = raw.trim().replace(/\s+/g, ' ')
+    if (!t) return d
+    if (d.some((x) => key(x.name) === key(t))) { setErr(`“${t}” is already in the list.`); return null }
+    if (team.members.some((x) => key(x.name) === key(t))) { setErr(`“${t}” is already in ${team.name}.`); return null }
+    return [...d, { id: uid(), name: t }]
+  }
+  const commit = () => {
+    const n = commitText(text)
+    if (n) { setDraft(n); setText('') }
+  }
+
+  const onChange = (v: string) => {
+    setErr(null)
+    if (v.includes(',')) {
+      const parts = v.split(',')
+      const rest = parts.pop() ?? ''
+      let d = draft
+      for (const p of parts) { const n = commitText(p, d); if (n) d = n }
+      setDraft(d)
+      v = rest
+    }
+    setText(v)
+  }
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if ((e.key === 'Tab' && !e.shiftKey) || e.key === 'Enter') {
+      // with an empty field, Tab moves on and Enter submits
+      if (!text.trim()) return
+      e.preventDefault()
+      commit()
+    } else if (e.key === 'Backspace' && !text && draft.length) {
+      setDraft(draft.slice(0, -1))
+    }
+  }
+  const submit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const d = commitText(text)
+    if (!d) return
+    if (!d.length) { setErr('Add at least one name.'); inRef.current?.focus(); return }
+    const role = (e.currentTarget.elements.namedItem('role') as HTMLSelectElement).value
+    update(({ S, ui }) => {
+      const t = artOf(S)?.teams.find((x) => x.id === team.id)
+      d.forEach((x) => t?.members.push({ id: uid(), name: x.name, role }))
+      ui.modal = null
+    })
+  }
+  const label = draft.length > 1 ? `Add ${draft.length} members` : 'Add member'
+
+  return (
+    <>
+      <h2 style={{ marginBottom: 14 }}>Add members <span className="mute" style={{ fontWeight: 600 }}>{team.name}</span></h2>
+      <form className="ff" autoComplete="off" onSubmit={submit}>
+        <div className="ra-wrap">
+          <div className="ra-lab">Names</div>
+          <div className={`ra-field${err ? ' invalid' : ''}`} onClick={() => inRef.current?.focus()}>
+            {draft.map((d) => (
+              <span className="ra-badge" key={d.id}>
+                <span title={d.name}>{d.name}</span>
+                <button type="button" className="ra-x" tabIndex={-1} aria-label={`Remove ${d.name}`} onClick={(e) => { e.stopPropagation(); setDraft(draft.filter((x) => x.id !== d.id)); inRef.current?.focus() }}>
+                  <XIcon />
+                </button>
+              </span>
+            ))}
+            <input
+              ref={inRef}
+              className="ra-in"
+              autoFocus
+              autoComplete="off"
+              autoCapitalize="words"
+              aria-label="Member name"
+              placeholder={draft.length ? 'Add another name' : 'e.g. Ada Lovelace'}
+              value={text}
+              onChange={(e) => onChange(e.target.value)}
+              onKeyDown={onKeyDown}
+            />
+          </div>
+          <div><Err msg={err} /></div>
+          <p className="mute" style={{ margin: '6px 0 0', fontSize: '.8rem' }}>Type a name and press Tab or Enter. Each one becomes a chip, so you can add several people before saving.</p>
+        </div>
+        <label className="f">Role
+          <select name="role" defaultValue={a.roles[0]?.name ?? ''}>
+            {a.roles.map((r) => <option key={r.id}>{r.name}</option>)}
+          </select>
+        </label>
+        <p className="mute" style={{ margin: '-4px 0 0', fontSize: '.8rem' }}>Applies to everyone you add here.</p>
+        <div className="row" style={{ justifyContent: 'flex-end', marginTop: 10 }}>
+          <button type="button" onClick={closeModal}>Cancel</button>
+          <button className="primary">{label}</button>
         </div>
       </form>
     </>

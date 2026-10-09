@@ -4,7 +4,7 @@ import { openModal } from './state/actions'
 import { PlanningView } from './components/Planning'
 import { AppBar, ModalView, Nav, SetupModal } from './components/Shell'
 import { Wizard } from './components/Wizard'
-import { CloudNotice } from './components/CloudNotice'
+import { CloudNotice } from './components/Sync'
 import { useCloud } from './state/cloud'
 import { update, useApp, useArt, useCurPI, useData, useUI } from './state/store'
 

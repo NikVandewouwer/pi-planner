@@ -1,7 +1,7 @@
-import { useMemo } from 'react'
+import { Fragment, useMemo, type CSSProperties } from 'react'
 import { SIZES, STATUSES } from '../domain/constants'
 import { fdelEst, fest, type PlanRow } from '../domain/model'
-import { buildPlan, type PlanCard } from '../domain/plan'
+import { buildPlan, planLanes, type PlanCard } from '../domain/plan'
 import type { Feature, PI, Team } from '../domain/types'
 import { fmt, initials, n2 } from '../domain/util'
 import { ask, openModal } from '../state/actions'
@@ -281,17 +281,47 @@ function FeaturesSection({ pi, teams }: { pi: PI; teams: Team[] }) {
 
 /* ---------- 4. plan board ---------- */
 
+/** Story points on a plan card: one decimal is enough there. */
+const sp1 = (x: number) => Math.round(x * 10) / 10
+
+/** Badge colour per status, matching the card's left border. */
+const STATUS_TAG: Record<Feature['status'], string> = { Committed: '', Uncommitted: ' warn', New: ' off' }
+
 function PlanSection({ plan, teams }: { plan: ReturnType<typeof buildPlan>; teams: Team[] }) {
   const a = useArt()
   const model = useModel()
 
-  const colCard = ({ f, tm, who, part }: PlanCard, key: string) => {
+  // "After this PI" is the last column, so a feature that spills over keeps its row there too
+  const { lanes, rows } = useMemo(() => planLanes([...plan.cols, plan.over]), [plan.cols, plan.over])
+
+  /**
+   * Per estimate, the SP planned in this sprint (or left after the PI) out of the estimate, e.g.
+   * "iOS + Android 4 of 10 SP". Platforms of one estimate that progress differently are listed
+   * apart: "iOS 4 · Android 6 of 10 SP".
+   */
+  const ptsLines = (f: Feature, pts: PlanCard['pts'], after: boolean) =>
+    model.fests(f).filter((e) => fest(f, e)).flatMap((e) => {
+      const total = `${sp1(fest(f, e))} SP`
+      const pls = model.platformsOfEst(e).filter((pl) => f.platforms.includes(pl))
+      if (!pts) return [`${pls.join(' + ')} ${total}`]
+      const vals = pls.map((pl) => pts[pl] || 0)
+      if (vals.every((v) => v < 0.05)) return []
+      const amount = vals.every((v) => Math.abs(v - vals[0]) < 0.05) ? `${pls.join(' + ')} ${sp1(vals[0])}` : pls.map((pl, k) => `${pl} ${sp1(vals[k])}`).join(' · ')
+      return [`${amount} of ${total}${after ? ' left' : ''}`]
+    })
+
+  const colCard = ({ f, tm, who, part, pts }: PlanCard, key: string, style: CSSProperties, after = false) => {
     const ms = who ? tm.members.filter((m) => who.includes(m.id)) : model.fAsg(f)
+    const lines = ptsLines(f, pts, after)
     return (
-      <div key={key} className={`pcard ${f.status}${part ? ' part' : ''}`} {...clickable(() => openModal({ type: 'feature', id: f.id }))} title={`${f.status} · ${tm.name}${part ? ' · continues next sprint' : ''}`}>
+      <div key={key} style={style} className={`pcard ${f.status}${part ? ' part' : ''}`} {...clickable(() => openModal({ type: 'feature', id: f.id }))} title={`${f.status} · ${tm.name}${part ? ' · continues later' : ''}`}>
         <b>{f.name}</b>
-        <small>{teams.length > 1 ? tm.name + ' · ' : ''}{model.fests(f).filter((e) => fest(f, e)).map((e) => `${model.estLabel(e)} ${n2(fest(f, e))}`).join(' · ') || 'no points'}</small>
-        <div className="pfoot"><TypeTag art={a} name={f.type} /><WhoStack ms={ms} max={4} wt={f.wt} /></div>
+        <WhoStack ms={ms} max={4} wt={f.wt} />
+        {teams.length > 1 && <small>{tm.name}</small>}
+        {lines.length ? lines.map((l) => <small key={l}>{l}</small>) : <small>No points</small>}
+        <div className="pfoot">
+          <div className="ptags"><span className={`tag${STATUS_TAG[f.status]}`}>{f.status}</span><TypeTag art={a} name={f.type} /></div>
+        </div>
       </div>
     )
   }
@@ -330,27 +360,33 @@ function PlanSection({ plan, teams }: { plan: ReturnType<typeof buildPlan>; team
   return (
     <div className="panel">
       <div className="head">
-        <h3><span className="step">4</span>Plan <Info text="Features are planned in order of status, Committed first, on each person's capacity per sprint. A dotted border means the work continues in a later sprint, and what doesn't fit moves past the PI." /></h3>
+        <h3><span className="step">4</span>Plan <Info text="Features are planned in order of status, Committed first, on each person's capacity per sprint. A dotted border means the work continues in a later sprint. What doesn't fit starts where there is capacity and continues after this PI." /></h3>
       </div>
-      <div className="board">
+      {/* one grid for all sprints: every feature has its own row (lane), also in "After this PI" */}
+      <div className="board" style={{ gridTemplateRows: `auto repeat(${Math.max(rows, 1)}, auto) 2px` }}>
         {plan.sp.map((d, i) => {
           const caps = colCaps(i)
+          const col = i + 1
           return (
-            <div className="col" key={i}>
-              <div className="colhd">
+            <Fragment key={i}>
+              <div className="colbg" style={{ gridColumn: col }} />
+              <div className="colhd" style={{ gridColumn: col, gridRow: 1 }}>
                 <b>Sprint {i + 1}</b>
                 <small>{fmt(d[0])} – {fmt(d[d.length - 1])}</small>
                 <div className="caps">{caps.length ? caps : <span className="colempty">No capacity</span>}</div>
               </div>
-              {plan.cols[i].length ? plan.cols[i].map((c, j) => colCard(c, c.f.id + ':' + j)) : <div className="colempty">Nothing planned</div>}
-            </div>
+              {plan.cols[i].length
+                ? plan.cols[i].map((c, j) => colCard(c, c.f.id + ':' + j, { gridColumn: col, gridRow: lanes[i][j] + 2 }))
+                : <div className="colempty" style={{ gridColumn: col, gridRow: 2 }}>Nothing planned</div>}
+            </Fragment>
           )
         })}
         {plan.over.length > 0 && (
-          <div className="col over">
-            <div className="colhd"><b>After this PI</b><small>Doesn't fit</small></div>
-            {plan.over.map((c, j) => colCard(c, c.f.id + ':o' + j))}
-          </div>
+          <>
+            <div className="colbg over" style={{ gridColumn: plan.sp.length + 1 }} />
+            <div className="colhd" style={{ gridColumn: plan.sp.length + 1, gridRow: 1 }}><b>After this PI</b><small>Doesn't fit</small></div>
+            {plan.over.map((c, j) => colCard(c, c.f.id + ':o' + j, { gridColumn: plan.sp.length + 1, gridRow: lanes[plan.sp.length][j] + 2 }, true))}
+          </>
         )}
       </div>
       {loads.length > 0 && (

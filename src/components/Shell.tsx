@@ -5,11 +5,12 @@ import { newArts } from '../domain/sync'
 import type { Modal, PI } from '../domain/types'
 import { fmt, piEnd, sd } from '../domain/util'
 import { ask, closeModal, confirmAsk, focusArt, openModal } from '../state/actions'
-import { addTrains, STATUS, useCloud } from '../state/cloud'
+import { addTrains, useCloud } from '../state/cloud'
 import { artOf, persistedJSON, piOf, update, useApp, useArt, useCurPI, useData, useUI } from '../state/store'
 import { askText } from './askText'
 import { MemberStats, RoleStats } from './Availability'
-import { BrandMark, MenuIcon, PenIcon, ThemeIcon, TrashIcon, XIcon } from './common'
+import { SyncStatus } from './Sync'
+import { BrandMark, ChevronIcon, MenuIcon, PenIcon, ThemeIcon, TrashIcon, XIcon } from './common'
 import { FeatureForm } from './FeatureForm'
 import { CloseX, DoneRow, ModalShell } from './ModalShell'
 import { PlatformsView } from './Platforms'
@@ -25,6 +26,8 @@ export function AppBar() {
   if (!S.done || ui.wizard || !a) {
     return <span className="brand"><BrandMark /><span>PI&nbsp;Planner</span></span>
   }
+  const pis = [...a.pis].sort((p, q) => p.start.localeCompare(q.start))
+  const at = pi ? pis.indexOf(pi) : -1
   return (
     <>
       <button className="icon" onClick={() => update(({ ui }) => { ui.menu = !ui.menu })} title="Menu" aria-label="Open menu" aria-expanded={ui.menu}>
@@ -35,7 +38,11 @@ export function AppBar() {
       <span className="hctx">
         <span className="artm">{a.name}</span>
         {pi ? (
-          <span className="hpi" title={`${fmt(pi.start)} – ${fmt(piEnd(pi))} · ${pi.sprints} sprints`}><b>{pi.name}</b><small>{sd(pi.start)}–{sd(piEnd(pi))}</small></span>
+          <span className="pinav">
+            {pis.length > 1 && <PIStep to={pis[at - 1]} dir="left" />}
+            <span className="hpi" title={`${fmt(pi.start)} – ${fmt(piEnd(pi))} · ${pi.sprints} sprints`}><b>{pi.name}</b><small>{sd(pi.start)}–{sd(piEnd(pi))}</small></span>
+            {pis.length > 1 && <PIStep to={pis[at + 1]} dir="right" />}
+          </span>
         ) : (
           <span className="hpi mute"><b>No PI yet</b></span>
         )}
@@ -53,6 +60,22 @@ export function AppBar() {
         )}
       </span>
     </>
+  )
+}
+
+/** Steps to the previous or next PI of the train; disabled at either end. */
+function PIStep({ to, dir }: { to: PI | undefined; dir: 'left' | 'right' }) {
+  const label = dir === 'left' ? 'Previous' : 'Next'
+  return (
+    <button
+      className="icon pistep"
+      disabled={!to}
+      onClick={() => to && update(({ S }) => { S.piId = to.id })}
+      title={to ? `${label}: ${to.name}` : label}
+      aria-label={to ? `${label} PI, ${to.name}` : `${label} PI`}
+    >
+      <ChevronIcon dir={dir} />
+    </button>
   )
 }
 
@@ -74,7 +97,6 @@ export function Nav() {
   const ui = useUI()
   const fileRef = useRef<HTMLInputElement>(null)
   const shared = useCloud((s) => s.enabled)
-  const status = useCloud((s) => s.status)
   if (!ui.menu) return null
   const th = ui.theme || 'system'
   const pal = ui.palette || 'forest'
@@ -176,7 +198,7 @@ export function Nav() {
             <button onClick={() => fileRef.current?.click()} title={shared ? 'Add the trains in an exported file' : 'Replace all data with an exported file'}>Import</button>
             <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = '' }} />
           </div>
-          <p className="nft" style={{ border: 0, padding: '10px 2px 0', margin: 0 }}>{STATUS[status]}</p>
+          <SyncStatus />
         </div>
       </nav>
     </>

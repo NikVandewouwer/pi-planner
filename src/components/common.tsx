@@ -13,6 +13,9 @@ export const TrashIcon = () => (
 export const XIcon = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" {...svg}><path d="M6 6l12 12M18 6L6 18" /></svg>
 )
+export const ChevronIcon = ({ dir }: { dir: 'left' | 'right' }) => (
+  <svg width={16} height={16} viewBox="0 0 24 24" {...svg}><path d={dir === 'left' ? 'm15 18-6-6 6-6' : 'm9 18 6-6-6-6'} /></svg>
+)
 export const CycleIcon = ({ size = 15, w = 2.2 }: { size?: number; w?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" {...svg} strokeWidth={w}><path d="M20 11a8 8 0 0 0-14.5-4M4 13a8 8 0 0 0 14.5 4M5 3v4h4M19 21v-4h-4" /></svg>
 )

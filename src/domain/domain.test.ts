@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { addPlatform, addToFeaturesOfEst, linkPlatform, missingFromEst, renamePlatform } from '../state/actions'
 import { migrate, newArt } from './migrate'
 import { Model } from './model'
-import { buildPlan } from './plan'
+import { buildPlan, planLanes, type PlanCard } from './plan'
 import { addArts, applyDoc, docHash, draftId, fromRow, removeArt, trainDoc } from './sync'
 import type { Art, Feature, PI } from './types'
 import { addDays, nextMonday, nextPIStart, piEnd, piSprints, toMonday } from './util'
@@ -123,6 +123,17 @@ describe('buildPlan', () => {
     const m = new Model(a, {})
     const plan = buildPlan(m, m.planStats(p, a.teams), p, a.teams)
     expect(plan.over.map((c) => c.f.id)).toEqual(['new'])
+    // it still starts on the capacity that is left, and continues after the PI
+    const started = plan.cols.flat().filter((c) => c.f.id === 'new')
+    expect(started.length).toBeGreaterThan(0)
+    expect(started.every((c) => c.part)).toBe(true)
+    expect(plan.over[0].part).toBe(true)
+    // SP per sprint plus what is left after the PI add up to the estimate
+    const inPI = started.reduce((x, c) => x + (c.pts?.Frontend ?? 0), 0)
+    expect(inPI).toBeGreaterThan(0)
+    expect(inPI + (plan.over[0].pts?.Frontend ?? 0)).toBeCloseTo(6)
+    const big = plan.cols.flat().filter((c) => c.f.id === 'big')
+    expect(big.reduce((x, c) => x + (c.pts?.Frontend ?? 0), 0)).toBeCloseTo(10)
   })
 
   it('plans weighted shares on each person and reports what does not fit', () => {
@@ -396,5 +407,17 @@ describe('sync', () => {
     expect(draftId({ ...S, artId: 'a' }, ui)).toBe('a')
     expect(draftId({ ...S, artId: 'a', done: true }, ui)).toBeNull()
     expect(draftId({ ...S, artId: 'a', done: true }, { ...ui, wizard: true })).toBe('a')
+  })
+})
+
+describe('planLanes', () => {
+  const tm = art([]).teams[0]
+  const card = (id: string): PlanCard => ({ f: feature({ id }), tm, who: [] })
+  it('gives every feature its own row over all its sprints', () => {
+    // A runs sprints 1-3, B 1-2, C 3-4, D only in 4
+    const cols = [[card('A'), card('B')], [card('A'), card('B')], [card('C'), card('A')], [card('C'), card('D')]]
+    const { lanes, rows } = planLanes(cols)
+    expect(lanes).toEqual([[0, 1], [0, 1], [2, 0], [2, 3]])
+    expect(rows).toBe(4)
   })
 })

@@ -317,6 +317,9 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .hpi small{font-size:.72rem;color:var(--mute);white-space:nowrap}
 @media (max-width:640px){.hpi b{max-width:30vw}}
 .hsep{width:1px;height:24px;background:var(--line);flex:none}
+.pinav{display:flex;align-items:center;gap:2px;min-width:0}
+button.icon.pistep{padding:4px;flex:none;border-color:transparent;background:transparent}
+button.icon.pistep:disabled{opacity:.3;cursor:default}
 .appbar .pill{box-shadow:none}
 .appbar .pistack b{font-size:.92rem;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .appbar .pistack small{font-size:.66rem}
@@ -534,9 +537,12 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .grid .tnm .in{display:inline-flex;align-items:center;gap:6px}
 .grid .rst{display:inline-grid;place-items:center;width:22px;height:22px;padding:0;flex:none;opacity:.5;border-radius:6px}
 .grid .rst:hover{opacity:1;background:var(--soft)}
-.board{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;margin-top:14px;scroll-snap-type:x proximity}
-.col{flex:0 0 240px;scroll-snap-align:start;background:var(--soft);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
-.col.over{background:color-mix(in srgb,var(--warn) 12%,transparent)}
+/* sprints are grid columns sharing rows (lanes); .colbg paints each column behind its cards */
+.board{display:grid;grid-auto-columns:240px;column-gap:12px;row-gap:10px;overflow-x:auto;padding-bottom:8px;margin-top:14px;scroll-snap-type:x proximity}
+.colbg{grid-row:1/-1;align-self:stretch;scroll-snap-align:start;background:var(--soft);border-radius:16px}
+.colbg.over{background:color-mix(in srgb,var(--warn) 12%,transparent)}
+.board>.colhd{padding:12px 12px 0}
+.board>.pcard,.board>.colempty{margin:0 12px;position:relative}
 .colhd b{display:block;font-size:.95rem;line-height:1.2}
 .colhd small{display:block;color:var(--mute);font-size:.74rem}
 .caps{display:grid;gap:5px;margin-top:8px}
@@ -548,8 +554,8 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .pcard small{display:block;color:var(--mute);font-size:.72rem;margin-top:2px}
 .pcard.Committed{border-left-color:var(--accent)}
 .pcard.part{border-style:dotted}
-.pfoot{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:6px;min-width:0}
-.pcard .pfoot .who{margin-top:0}
+.pfoot{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:6px;min-width:0}
+.ptags{display:flex;flex-wrap:wrap;gap:4px;min-width:0}
 :root{--tc0:#3b82f6;--tc1:#8b5cf6;--tc2:#0d9488;--tc3:#ec4899;--tc4:#0ea5e9;--tc5:#c026d3;--tc6:#a8734a;--tc7:#64748b}
 .ttag{--tc:var(--mute);display:inline-flex;align-items:center;max-width:100%;min-width:0;font-size:.68rem;font-weight:600;line-height:1.3;padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--tc) 16%,transparent);color:color-mix(in srgb,var(--tc) 72%,var(--ink));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
 table.ftab .ttag{font-size:.72rem;padding:3px 10px;min-height:24px;box-sizing:border-box}

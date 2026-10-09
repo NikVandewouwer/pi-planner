@@ -7,8 +7,10 @@ export interface PlanCard {
   tm: Team
   /** Member ids working on it in this sprint; null when the feature has no points */
   who: string[] | null
-  /** Continues in a later sprint */
+  /** Continues in a later sprint, or after this PI */
   part?: boolean
+  /** SP per platform planned in this sprint; on a card after the PI, what is left to do */
+  pts?: Record<Platform, number>
 }
 
 export interface Plan {
@@ -19,7 +21,10 @@ export interface Plan {
   left: Record<string, number[]>
   /** Cards per sprint column */
   cols: PlanCard[][]
-  /** Features that do not fit this PI */
+  /**
+   * Features that do not fit this PI. Those that start in it also have cards in the sprints
+   * they are worked on, and their card here is `part`: it continues in the next PI.
+   */
   over: PlanCard[]
   /** member -> capacity per sprint */
   mcap: Record<string, number[]>
@@ -85,6 +90,7 @@ export function buildPlan(model: Model, ps: PlanStats, pi: PI, teams: Team[]): P
       let fits = true
       let work = false
       const used = sp.map(() => new Set<string>())
+      const done = sp.map((): Record<Platform, number> => ({}))
       // take `amount` SP from these people's remaining capacity on this platform, sprint by sprint; returns what did not fit
       const place = (ids: string[], pl: Platform, amount: number) => {
         let need = amount
@@ -99,6 +105,7 @@ export function buildPlan(model: Model, ps: PlanStats, pi: PI, teams: Team[]): P
             need -= use
             last = Math.max(last, i)
             used[i].add(id)
+            done[i][pl] = (done[i][pl] || 0) + use
           }
         }
         return need > EPS ? need : 0
@@ -133,8 +140,16 @@ export function buildPlan(model: Model, ps: PlanStats, pi: PI, teams: Team[]): P
         if (cols[0]) cols[0].push({ f, tm, who: null })
         return
       }
-      if (fits && last >= 0) used.forEach((s, i) => { if (i <= last && s.size) cols[i].push({ f, tm, who: [...s], part: i < last }) })
-      else over.push({ f, tm, who: null })
+      // what doesn't fit still starts where there is capacity, and spills over past the PI
+      used.forEach((s, i) => { if (i <= last && s.size) cols[i].push({ f, tm, who: [...s], part: !fits || i < last, pts: done[i] }) })
+      if (!fits) {
+        const left: Record<Platform, number> = {}
+        f.platforms.forEach((pl) => {
+          const rem = model.fpts(f, pl) - done.reduce((x, d) => x + (d[pl] || 0), 0)
+          if (rem > EPS) left[pl] = rem
+        })
+        over.push({ f, tm, who: null, part: last >= 0, pts: left })
+      }
     })
   })
   teams.forEach((tm) => model.platforms.forEach((pl) => (left[tm.id + '|' + pl] = sp.map((_, i) => capOf(tm.id, pl, i, sleft)))))
@@ -149,4 +164,15 @@ export function buildPlan(model: Model, ps: PlanStats, pi: PI, teams: Team[]): P
   add(mcap, scap)
   add(mleft, sleft)
   return { sp, cap, left, cols, over, mcap, mleft, short }
+}
+
+/**
+ * Row ("lane") per card on the board: every feature gets its own row, in the order it first
+ * appears (plan priority), and keeps it in every sprint it runs in. Returns lanes[col][card] and
+ * the row count.
+ */
+export function planLanes(cols: PlanCard[][]): { lanes: number[][]; rows: number } {
+  const laneOf = new Map<string, number>()
+  cols.forEach((c) => c.forEach(({ f }) => { if (!laneOf.has(f.id)) laneOf.set(f.id, laneOf.size) }))
+  return { lanes: cols.map((c) => c.map(({ f }) => laneOf.get(f.id)!)), rows: laneOf.size }
 }

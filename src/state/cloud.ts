@@ -20,17 +20,19 @@ import { supabase } from './supabase'
  * edits made just before a reload or while offline are still pushed.
  */
 
-type Status = 'local' | 'loading' | 'saving' | 'saved' | 'offline' | 'error'
+export type Status = 'local' | 'loading' | 'saving' | 'saved' | 'offline' | 'error'
 
 interface CloudState {
   /** A Supabase project is configured in this build. */
   enabled: boolean
   status: Status
+  /** When the trains last matched the database (ms since epoch). */
+  syncedAt: number | null
   /** A message about a change made elsewhere, shown until dismissed. */
   notice: string | null
 }
 
-export const useCloud = create<CloudState>(() => ({ enabled: !!supabase, status: supabase ? 'loading' : 'local', notice: null }))
+export const useCloud = create<CloudState>(() => ({ enabled: !!supabase, status: supabase ? 'loading' : 'local', syncedAt: null, notice: null }))
 const setCloud = (p: Partial<CloudState>) => useCloud.setState(p)
 
 /** Local cache of the shared trains, kept apart from the browser-only data under STORAGE_KEY. */
@@ -142,6 +144,7 @@ async function pull() {
     if (!S.arts.some((a) => a.id === S.artId)) S.artId = S.arts[0]?.id ?? null
   })
   saveBase()
+  setCloud({ syncedAt: Date.now() })
   if (lost.length) setCloud({ notice: `${lost.join(', ')} changed elsewhere while you were editing. The latest saved version is shown.` })
 }
 
@@ -189,7 +192,7 @@ async function push() {
     base.delete(id)
   }
   saveBase()
-  setCloud({ status: 'saved' })
+  setCloud({ status: 'saved', syncedAt: Date.now() })
 }
 
 /** Gives a train that was never stored a new id, and pushes it again. */
@@ -255,14 +258,4 @@ export async function startCloud() {
   live = true
   if (useCloud.getState().status === 'loading') setCloud({ status: 'saved' })
   schedulePush(0)
-}
-
-/** Status line for the menu. */
-export const STATUS: Record<Status, string> = {
-  local: 'Data is stored in this browser only. Export it to keep a backup or move it to another browser.',
-  loading: 'Loading…',
-  saving: 'Saving…',
-  saved: 'Trains are shared with everyone who opens this app. All changes saved.',
-  offline: 'Offline. Changes are saved when you’re back online.',
-  error: 'Can’t save right now. Trying again.',
 }

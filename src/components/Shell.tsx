@@ -197,7 +197,9 @@ export function SetupModal() {
     : ui.setupTab === 'ftypes' ? <TypesView />
     : (
       <>
+        <p className="help">The name of this train.</p>
         <div className="panel">
+          <div className="fsec" style={{ marginBottom: 12 }}>General</div>
           <label className="f">Name
             <input value={a.name} onChange={(e) => { const v = e.target.value; update(({ S }) => { const x = artOf(S); if (x) x.name = v }) }} />
           </label>
@@ -223,6 +225,7 @@ export function SetupModal() {
         {tabs.map(([k, l]) => <button key={k} className={ui.setupTab === k ? 'on' : ''} onClick={() => update(({ ui }) => { ui.setupTab = k })}>{l}</button>)}
       </div>
       <div style={{ marginTop: 14 }}>{body}</div>
+      <DoneRow onClose={close} />
     </ModalShell>
   )
 }

@@ -113,12 +113,13 @@ export function TeamsView() {
   const ms = model.allMembers()
   return (
     <>
+      <p className="help">The teams in this train and who is in them.</p>
       <div className="row">
         <span className="grow mute">{a.teams.length} {a.teams.length === 1 ? 'team' : 'teams'}, {ms.length} {ms.length === 1 ? 'member' : 'members'}</span>
         <button className="primary" onClick={() => openModal({ type: 'newTeam' })}>Add</button>
       </div>
       {a.teams.length ? a.teams.map((t) => (
-        <section className="tsec" key={t.id}>
+        <section className="panel" key={t.id}>
           <div className="secrow">
             <div>
               <h3>{t.name} <span className="mute" style={{ fontWeight: 600 }}>({t.members.length})</span></h3>
@@ -457,8 +458,9 @@ function RoleAddForm() {
   /** Highlighted suggestion for the keyboard, -1 for none */
   const [hi, setHi] = useState(-1)
   const [err, setErr] = useState<string | null>(null)
-  const [planned, setPlanned] = useState(true)
-  const [plats, setPlats] = useState<string[]>(() => a.platforms.slice(0, 1).map((p) => p.name))
+  // no defaults: whoever adds a role decides whether it counts and on which platforms
+  const [planned, setPlanned] = useState(false)
+  const [plats, setPlats] = useState<string[]>([])
   const inRef = useRef<HTMLInputElement>(null)
 
   const taken = (n: string, d = draft) => { const k = raKey(n); return a.roles.some((r) => raKey(r.name) === k) || d.some((r) => raKey(r.name) === k) }

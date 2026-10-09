@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Upgrades any data shape the app has ever stored (including the original single-file
 // version) to the current one. Input is untrusted JSON, hence the `any`s.
-import { DEFAULT_FTYPES, DEFAULT_PLANNED, DEFAULT_VELOCITY, GF0, PLATFORMS, ROLES } from './constants'
+import { DEFAULT_FTYPES, DEFAULT_PLANNED, DEFAULT_PLATFORMS, DEFAULT_VELOCITY, GF0, LEGACY_PLATFORMS, ROLES } from './constants'
 import { Model } from './model'
-import type { Art, Data, Platform, UI } from './types'
+import type { Art, Data, UI } from './types'
 import { num, piEnd, uid } from './util'
 
 export const emptyData = (): Data => ({ arts: [], avail: {}, artId: null, piId: null, done: false })
@@ -16,12 +16,12 @@ export const nextTypeColor = (a: Pick<Art, 'ftypes'>) => {
 }
 
 export const newArt = (): Art => {
-  const a: Art = { id: uid(), name: '', teams: [], pis: [], roles: [], ftypes: [] }
+  const a: Art = { id: uid(), name: '', teams: [], pis: [], roles: [], ftypes: [], platforms: DEFAULT_PLATFORMS.map(([name, est]) => ({ id: uid(), name, est })) }
   DEFAULT_FTYPES.forEach((name) => a.ftypes.push({ id: uid(), name, c: nextTypeColor(a) }))
   return a
 }
 
-const defPlat = (n: string): Platform | '' => (/frontend|mobile|ios|android|web/i.test(n) ? 'Frontend' : /backend/i.test(n) ? 'Backend' : '')
+const defPlat = (n: string): string => (/frontend|mobile|ios|android|web/i.test(n) ? 'Frontend' : /backend/i.test(n) ? 'Backend' : '')
 
 function renamePlat(a: any) {
   const mv = (o: any) => {
@@ -44,6 +44,10 @@ export function ensureArt(a: any, avail: Data['avail']): Art {
   a.pis = a.pis || []
   a.teams.forEach((t: any) => { t.members = t.members || [] })
   renamePlat(a)
+  // before platforms were configurable, every train had Frontend and Backend, each with its own estimate
+  if (!Array.isArray(a.platforms)) a.platforms = LEGACY_PLATFORMS.map((name) => ({ id: uid(), name, est: name }))
+  a.platforms.forEach((p: any) => { if (!p.id) p.id = uid(); if (!p.est) p.est = p.name })
+  const PLATFORMS: string[] = a.platforms.map((p: any) => p.name)
   a.teams.forEach((t: any) => {
     if (!t.velocity || typeof t.velocity !== 'object') {
       const v = num(t.velocity)
@@ -59,9 +63,14 @@ export function ensureArt(a: any, avail: Data['avail']): Art {
   a.roles.forEach((r: any) => {
     if (!r.id) r.id = uid()
     if (r.platform === undefined) r.platform = defPlat(r.name)
+    if (r.platform && !PLATFORMS.includes(r.platform)) r.platform = ''
+    // a role used to have exactly one platform
+    if (!Array.isArray(r.platforms)) r.platforms = r.platform ? [r.platform] : []
+    r.platforms = r.platforms.filter((pl: string) => PLATFORMS.includes(pl))
+    delete r.platform
   })
   a.teams.forEach((t: any) => t.members.forEach((m: any) => {
-    if (m.role && !a.roles.some((r: any) => r.name === m.role)) a.roles.push({ id: uid(), name: m.role, planned: false, platform: '' })
+    if (m.role && !a.roles.some((r: any) => r.name === m.role)) a.roles.push({ id: uid(), name: m.role, planned: false, platforms: [] })
   }))
 
   const model = new Model(a as Art, avail)
@@ -102,15 +111,15 @@ export function ensureArt(a: any, avail: Data['avail']): Art {
       delete f.platform
     })
   })
-  // weights used to be story points; convert to % of the platform estimate
+  // weights used to be story points; convert to % of the platform estimate (estimate == platform in that era)
   a.pis.forEach((p: any) => p.features.forEach((f: any) => {
     if (f.wtU === 'pct') return
     const tm = a.teams.find((x: any) => x.id === f.team)
     const nw: any = {}
     Object.keys(f.wt || {}).forEach((id) => {
       const m = tm && tm.members.find((x: any) => x.id === id)
-      const pl = m && model.platOf(m.role)
-      const est = pl ? num((f.pts || {})[pl]) : null
+      const pl = m && model.platsOf(m.role)[0]
+      const est = pl ? num((f.pts || {})[model.estOf(pl)]) : null
       const sp = num(f.wt[id])
       if (est != null && est > 0 && sp != null && sp > 0) nw[id] = Math.round((sp / est) * 1000) / 10
     })
@@ -119,13 +128,14 @@ export function ensureArt(a: any, avail: Data['avail']): Art {
   }))
   a.pis.forEach((p: any) => p.features.forEach((f: any) => {
     if (!Array.isArray(f.platforms)) {
-      const s = new Set([...Object.keys(f.pts || {}), ...Object.keys(f.del || {})])
+      // pts/del are keyed by estimate; pick the platforms that deliver those estimates
+      const ests = new Set([...Object.keys(f.pts || {}), ...Object.keys(f.del || {})])
+      const s = new Set(PLATFORMS.filter((pl) => ests.has(model.estOf(pl))))
       if (!s.size) {
         const tm = a.teams.find((x: any) => x.id === f.team)
         ;(f.who || []).forEach((id: string) => {
           const m = tm && tm.members.find((x: any) => x.id === id)
-          const pl = m && model.platOf(m.role)
-          if (pl) s.add(pl)
+          if (m) model.platsOf(m.role).forEach((pl) => s.add(pl))
         })
       }
       f.platforms = PLATFORMS.filter((p2) => s.has(p2))
@@ -174,8 +184,8 @@ export function migrate(raw: any): { S: Data; ui: UI } {
   ui.paint = ui.paint || 'cycle'
   ui.team = ui.team || 'all'
   ui.mainTab = ui.mainTab || 'availability'
-  if (!['general', 'roles', 'teams', 'ftypes'].includes(ui.setupTab)) ui.setupTab = 'general'
+  if (!['general', 'platforms', 'roles', 'teams', 'ftypes'].includes(ui.setupTab)) ui.setupTab = 'general'
   ui.gf = Object.assign({}, GF0, ui.gf)
-  if ((ui.gf.platform as string) === 'Mobile') ui.gf.platform = 'Frontend'
+  if (ui.gf.platform === 'Mobile') ui.gf.platform = 'Frontend'
   return { S: S as Data, ui }
 }

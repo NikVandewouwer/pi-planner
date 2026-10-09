@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { PLATFORMS, SIZES, STATUSES } from '../domain/constants'
+import { SIZES, STATUSES } from '../domain/constants'
 import type { Model } from '../domain/model'
-import type { Feature, Platform, Size, Status } from '../domain/types'
+import type { Estimate, Feature, Platform, Size, Status } from '../domain/types'
 import { initials, n2, num, uid } from '../domain/util'
 import { ask, closeModal } from '../state/actions'
 import { artOf, piOf, update, useArt, useCurPI, useModel, useScopeTeams } from '../state/store'
@@ -13,25 +13,32 @@ import { Switch } from './settings'
 interface Draft {
   team: string
   platforms: Platform[]
-  pts: Partial<Record<Platform, string | number>>
-  del: Partial<Record<Platform, string | number>>
+  /** Per estimate key (platforms estimated together share one), not per platform */
+  pts: Partial<Record<Estimate, string | number>>
+  del: Partial<Record<Estimate, string | number>>
   who: string[]
   wt: Record<string, string | number>
   /** Weights were edited by hand, so they are no longer split evenly */
   manual: boolean
 }
 
-/** Split 100% evenly over the assigned people of each selected platform. */
+/**
+ * Split 100% over the assigned people of each selected platform, in proportion to how much of
+ * their time they spend on it: two iOS devs get 50/50, a dev and a QA who also tests Android 67/33.
+ */
 function evenMap(model: Model, d: Draft) {
   const out: Record<string, number> = {}
-  PLATFORMS.filter((p) => d.platforms.includes(p)).forEach((pl) => {
-    const ids = model.ftMembers(d.team, [pl]).filter((m) => d.who.includes(m.id)).map((m) => m.id)
-    const n = ids.length
-    if (!n) return
-    const base = Math.floor(1000 / n) / 10
+  model.platforms.filter((p) => d.platforms.includes(p)).forEach((pl) => {
+    const ms = model.ftMembers(d.team, [pl]).filter((m) => d.who.includes(m.id))
+    const tot = ms.reduce((x, m) => x + model.share(m.role, pl), 0)
+    if (!ms.length || !tot) return
     let acc = 0
-    ids.forEach((id, i) => {
-      if (i < n - 1) { out[id] = base; acc += base } else out[id] = Math.round((100 - acc) * 10) / 10
+    ms.forEach((m, i) => {
+      if (i < ms.length - 1) {
+        const w = Math.floor((model.share(m.role, pl) / tot) * 1000) / 10
+        out[m.id] = w
+        acc += w
+      } else out[m.id] = Math.round((100 - acc) * 10) / 10
     })
   })
   return out
@@ -74,11 +81,14 @@ export function FeatureForm({ id }: { id: string }) {
       if (!x.manual) return
       if (on) {
         // give the newcomer what is left of their platform's 100%
-        const mm = model.ftMembers(x.team, PLATFORMS).find((y) => y.id === mid)
+        const mm = model.ftMembers(x.team, model.platforms).find((y) => y.id === mid)
         if (mm) {
-          const pl = model.platOf(mm.role) as Platform
-          const others = model.ftMembers(x.team, [pl]).filter((y) => y.id !== mid && x.who.includes(y.id)).reduce((s, y) => s + (num(x.wt[y.id]) || 0), 0)
-          const r = Math.round((100 - others) * 10) / 10
+          // what is left of 100% on each of their platforms; the tightest one wins
+          const rs = model.platsOf(mm.role).filter((pl) => x.platforms.includes(pl)).map((pl) => {
+            const others = model.ftMembers(x.team, [pl]).filter((y) => y.id !== mid && x.who.includes(y.id)).reduce((s, y) => s + (num(x.wt[y.id]) || 0), 0)
+            return Math.round((100 - others) * 10) / 10
+          })
+          const r = rs.length ? Math.min(...rs) : 0
           x.wt[mid] = r > 0 ? r : ''
         }
       } else delete x.wt[mid]
@@ -89,20 +99,21 @@ export function FeatureForm({ id }: { id: string }) {
     const el = e.currentTarget.elements
     const val = (n: string) => (el.namedItem(n) as HTMLInputElement | HTMLSelectElement).value
     const name = val('name').trim()
-    if (!name) return setErr({ field: 'name', msg: 'Please enter a name.' })
-    if (!d.platforms.length) return setErr({ field: 'plat', msg: 'Select at least one platform.' })
-    const pls = PLATFORMS.filter((p) => d.platforms.includes(p))
+    if (!name) return setErr({ field: 'name', msg: 'Enter a name.' })
+    if (!d.platforms.length) return setErr({ field: 'plat', msg: 'Pick at least one platform.' })
+    const pls = model.platforms.filter((p) => d.platforms.includes(p))
+    const ests = [...new Set(pls.map(model.estOf))]
     const ok = new Set(model.ftMembers(d.team, pls).map((m) => m.id))
     const o: Omit<Feature, 'id'> = {
       name, team: d.team, type: val('type'), size: val('size') as Size, status: val('status') as Status, spill,
       platforms: pls, who: d.who.filter((x) => ok.has(x)), wt: {}, pts: {}, del: {}, wtU: 'pct',
     }
     o.who.forEach((id) => { const n = num(d.wt[id]); if (n != null && n > 0) o.wt[id] = Math.min(100, n) })
-    pls.forEach((pl) => {
-      const n = num(d.pts[pl])
-      if (n != null && n > 0) o.pts[pl] = n
-      const x = d.del[pl] == null ? null : num(d.del[pl])
-      if (x != null && x >= 0) o.del[pl] = x
+    ests.forEach((e) => {
+      const n = num(d.pts[e])
+      if (n != null && n > 0) o.pts[e] = n
+      const x = d.del[e] == null ? null : num(d.del[e])
+      if (x != null && x >= 0) o.del[e] = x
     })
     update(({ S, ui }) => {
       const p = piOf(S, artOf(S))
@@ -114,7 +125,8 @@ export function FeatureForm({ id }: { id: string }) {
     })
   }
 
-  const pls = PLATFORMS.filter((p) => d.platforms.includes(p))
+  const pls = model.platforms.filter((p) => d.platforms.includes(p))
+  const ests = [...new Set(pls.map(model.estOf))]
   const whoMembers = model.ftMembers(d.team, d.platforms)
   const str = (x: unknown) => (x != null ? String(x) : '')
 
@@ -124,14 +136,14 @@ export function FeatureForm({ id }: { id: string }) {
     model.ftMembers(d.team, [pl]).filter((m) => d.who.includes(m.id)).forEach((m) => { const n = num(d.wt[m.id]); if (n != null && n > 0) { w += n; any = true } })
     if (!any) return []
     w = Math.round(w * 10) / 10
-    if (w === 100) return [<div key={pl} className="wsum ok">{pl}: 100% weighted.</div>]
-    if (w < 100) return [<div key={pl} className="wsum warn">{pl}: {n2(w)}% weighted. The remaining {n2(Math.round((100 - w) * 10) / 10)}% is planned on assigned people without a weight, or on everyone of that platform.</div>]
-    return [<div key={pl} className="wsum warn">{pl}: {n2(w)}% weighted, more than 100%. The weights are what gets planned.</div>]
+    if (w === 100) return [<div key={pl} className="wsum ok">{pl}: 100% assigned.</div>]
+    if (w < 100) return [<div key={pl} className="wsum warn">{pl}: {n2(w)}% assigned. The other {n2(Math.round((100 - w) * 10) / 10)}% goes to the rest of the platform.</div>]
+    return [<div key={pl} className="wsum warn">{pl}: {n2(w)}% assigned, which is more than the estimate.</div>]
   })
 
   return (
     <>
-      <h2 style={{ marginBottom: 14 }}>{f ? 'Edit feature' : 'Add feature'}</h2>
+      <h2 style={{ marginBottom: 14 }}>{f ? 'Edit feature' : 'New feature'}</h2>
       <form className="ff" onSubmit={submit}>
         <div className="fsec">Details</div>
         <label className="f">Name
@@ -155,14 +167,14 @@ export function FeatureForm({ id }: { id: string }) {
         <Switch checked={spill} onChange={setSpill} label="Spillover" name="spill" style={{ margin: '2px 0' }} />
 
         <div className="fsec" style={{ marginTop: 10 }}>
-          Delivered by <Info size={16} text="Select the platforms working on this feature, then pick who delivers it from the team selected above. Only members of the selected platforms are shown, and their availability per sprint decides when it can finish on the Plan board. Each person gets a share of the platform's estimate, split evenly by default. Change the percentages when the work is not shared equally; per platform they should add up to 100%. The Plan board then places each person's share against their own capacity." />
+          Delivered by <Info size={16} text="Each platform builds the whole feature, and its share is split over the people you pick. Leave everyone unchecked to plan it on the whole platform." />
         </div>
         <div className="ft-plats">
-          {PLATFORMS.map((pl) => {
+          {model.platforms.map((pl) => {
             const on = d.platforms.includes(pl)
             return (
               <label key={pl} className={`ft-chip${on ? ' on' : ''}`}>
-                <input type="checkbox" checked={on} onChange={(e) => { setErr(null); change((x) => { x.platforms = PLATFORMS.filter((p) => (p === pl ? e.target.checked : x.platforms.includes(p))) }) }} />
+                <input type="checkbox" checked={on} onChange={(e) => { setErr(null); change((x) => { x.platforms = model.platforms.filter((p) => (p === pl ? e.target.checked : x.platforms.includes(p))) }) }} />
                 {pl}
               </label>
             )
@@ -171,9 +183,9 @@ export function FeatureForm({ id }: { id: string }) {
         <div>{err?.field === 'plat' && <Err msg={err.msg} />}</div>
         <div className="asg">
           {!d.platforms.length ? (
-            <p className="mute" style={{ margin: 0, fontSize: '.8rem' }}>Select a platform above to see its members.</p>
+            <p className="mute" style={{ margin: 0, fontSize: '.8rem' }}>Pick a platform to see its members.</p>
           ) : !whoMembers.length ? (
-            <p className="mute" style={{ margin: 0, fontSize: '.8rem' }}>This team has no members included in planning on the selected platforms yet.</p>
+            <p className="mute" style={{ margin: 0, fontSize: '.8rem' }}>No members of this team work on these platforms.</p>
           ) : (
             <>
               {whoMembers.map((m) => {
@@ -209,22 +221,25 @@ export function FeatureForm({ id }: { id: string }) {
         </div>
 
         <div className="fsec" style={{ marginTop: 10 }}>
-          Story Points <Info size={16} text="Estimated points count against each platform's forecast. Delivered points are what was really delivered and feed the velocity of this Program Increment. Leave Delivered empty until you know it: empty is not the same as 0." />
+          Story points <Info size={16} text="Platforms estimated together share one number and each builds all of it. Fill in Delivered once the work is done, as it sets the velocity for future PIs." />
         </div>
         <div>
-          {!pls.length ? (
-            <p className="mute" style={{ margin: 0, fontSize: '.85rem' }}>Select a platform under Delivered by to estimate and track its story points.</p>
+          {!ests.length ? (
+            <p className="mute" style={{ margin: 0, fontSize: '.85rem' }}>Pick a platform to estimate this feature.</p>
           ) : (
             <div className="ftp-list">
-              {pls.map((pl) => (
-                <div className="ftp" key={pl}>
-                  <div className="ftp-h"><b>{pl}</b></div>
+              {ests.map((est) => (
+                <div className="ftp" key={est}>
+                  <div className="ftp-h">
+                    <b>{pls.filter((pl) => model.estOf(pl) === est).join(' + ')}</b>
+                    {pls.filter((pl) => model.estOf(pl) === est).length > 1 && <span className="mute" style={{ fontSize: '.8rem' }}> · built in parallel</span>}
+                  </div>
                   <div className="ff2">
                     <label className="f">Estimated
-                      <input inputMode="decimal" placeholder="0" value={str(d.pts[pl])} onChange={(e) => change((x) => { x.pts[pl] = e.target.value })} aria-label={`Estimated story points ${pl}`} />
+                      <input inputMode="decimal" placeholder="0" value={str(d.pts[est])} onChange={(e) => change((x) => { x.pts[est] = e.target.value })} aria-label={`Estimated story points ${model.estLabel(est)}`} />
                     </label>
                     <label className="f">Delivered
-                      <input inputMode="decimal" placeholder="–" value={str(d.del[pl])} onChange={(e) => change((x) => { x.del[pl] = e.target.value === '' ? undefined : e.target.value })} aria-label={`Delivered story points ${pl}`} />
+                      <input inputMode="decimal" placeholder="–" value={str(d.del[est])} onChange={(e) => change((x) => { x.del[est] = e.target.value === '' ? undefined : e.target.value })} aria-label={`Delivered story points ${model.estLabel(est)}`} />
                     </label>
                   </div>
                 </div>
@@ -236,7 +251,7 @@ export function FeatureForm({ id }: { id: string }) {
           {f ? <button type="button" className="ghost danger" onClick={() => ask('feature', f.id)}>Delete</button> : <span />}
           <div className="row" style={{ margin: 0 }}>
             <button type="button" onClick={closeModal}>Cancel</button>
-            <button className="primary">{f ? 'Save' : 'Add feature'}</button>
+            <button className="primary">{f ? 'Save' : 'Add'}</button>
           </div>
         </div>
       </form>

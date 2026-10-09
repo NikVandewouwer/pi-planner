@@ -1,4 +1,4 @@
-import { PLATFORMS, VALS } from '../domain/constants'
+import { VALS } from '../domain/constants'
 import { gridScope } from '../domain/grid'
 import type { Member, PI, Team } from '../domain/types'
 import { fmt, initials, n2, piSprints, tone, vcls, vlabel, wd } from '../domain/util'
@@ -44,13 +44,13 @@ export function CapacityView({ pi }: { pi: PI }) {
   const model = useModel()
   const teams = useScopeTeams()
   const ms = teams.flatMap((t) => t.members)
-  if (!ms.length) return <div className="empty">Add team members to see availability.</div>
+  if (!ms.length) return <div className="empty">No team members yet.</div>
 
   const g = gridScope(model, pi, teams, ui.gf)
   const starts = new Set(g.sp.map((s) => s[0]))
   const inPlan = ms.filter((m) => model.isPlanned(m.role))
   const outPlan = ms.filter((m) => !model.isPlanned(m.role))
-  const noPlat = a.roles.filter((r) => r.planned && !r.platform && ms.some((m) => m.role === r.name))
+  const noPlat = a.roles.filter((r) => r.planned && !model.platsOf(r.name).length && ms.some((m) => m.role === r.name))
   const setGf = (key: string, v: string | boolean) => update(({ ui }) => { ui.gf = { ...g.gf, [key]: v } })
 
   const groups = teams.map((t) => ({ t, ms: t.members.filter(g.passes) })).filter((x) => x.ms.length)
@@ -59,32 +59,32 @@ export function CapacityView({ pi }: { pi: PI }) {
     <>
       {noPlat.length > 0 && (
         <div className="empty" style={{ textAlign: 'left', marginBottom: 12, borderColor: 'var(--warn)', color: 'var(--ink)' }}>
-          <b>{noPlat.map((r) => r.name).join(', ')}</b> {noPlat.length === 1 ? 'counts' : 'count'} in planning but {noPlat.length === 1 ? 'has' : 'have'} no platform, so {noPlat.length === 1 ? 'its' : 'their'} days are left out of the forecast. Set a platform under Roles.
+          <b>{noPlat.map((r) => r.name).join(', ')}</b> {noPlat.length === 1 ? 'has' : 'have'} no platform, so {noPlat.length === 1 ? 'its' : 'their'} days are left out of the forecast. Pick one under Roles.
         </div>
       )}
       <div className="head">
-        <h3>Availability overview <Info text={`Sprint bars show the percentage of days available in that sprint. Days in ${pi.name}. Roles that count in planning are set per role under Roles. Green is 80% or more, orange 60% or more, red below. Select a card for details by sprint, team and role.`} /></h3>
+        <h3>Overview <Info text="Share of working days people are available in this PI, per sprint. Green is 80% or more, orange 60% or more. Select a card for details." /></h3>
       </div>
       <div className="kpis">
         <Kpi label="Everyone" list={ms} statKey="__all" pi={pi} />
         {inPlan.length > 0 && <Kpi label="Included in planning" list={inPlan} statKey="__planned" pi={pi} />}
         {outPlan.length > 0 && <Kpi label="Excluded from planning" list={outPlan} statKey="__unplanned" pi={pi} />}
-        {PLATFORMS.map((pl) => {
-          const grp = ms.filter((m) => model.platOf(m.role) === pl)
+        {model.platforms.map((pl) => {
+          const grp = ms.filter((m) => model.covers(m.role, pl))
           return grp.length ? <Kpi key={pl} label={pl} list={grp} statKey={'__plat:' + pl} pi={pi} /> : null
         })}
       </div>
 
       <div className="panel">
         <div className="head">
-          <h3>Daily availability <Info text="Hatched days are public holidays or team days off. Untouched days count as 1." /></h3>
+          <h3>Daily availability <Info text="Pick a value and click a day to set it. Days you haven't set count as fully available, and hatched days are days off." /></h3>
           <div className="brush" role="radiogroup" aria-label="Brush">
             <span className="mute">Brush</span>
-            <button role="radio" aria-checked={ui.paint === 'cycle'} className={`sw0${ui.paint === 'cycle' ? ' on' : ''}`} onClick={() => update(({ ui }) => { ui.paint = 'cycle' })} title="Cycle: click a day to step through the values" aria-label="Cycle values">
+            <button role="radio" aria-checked={ui.paint === 'cycle'} className={`sw0${ui.paint === 'cycle' ? ' on' : ''}`} onClick={() => update(({ ui }) => { ui.paint = 'cycle' })} title="Each click steps to the next value" aria-label="Cycle through values">
               <CycleIcon />
             </button>
             {VALS.map((v) => (
-              <button key={v} role="radio" aria-checked={ui.paint === String(v)} className={`sw0 ${vcls(v)}${ui.paint === String(v) ? ' on' : ''}`} onClick={() => update(({ ui }) => { ui.paint = String(v) })} title={`Set a day to ${v}`}>
+              <button key={v} role="radio" aria-checked={ui.paint === String(v)} className={`sw0 ${vcls(v)}${ui.paint === String(v) ? ' on' : ''}`} onClick={() => update(({ ui }) => { ui.paint = String(v) })} title={`Set to ${v}`}>
                 {vlabel(v)}
               </button>
             ))}
@@ -101,7 +101,7 @@ export function CapacityView({ pi }: { pi: PI }) {
           <label className="pill"><span>Platform</span>
             <select value={g.gf.platform} onChange={(e) => setGf('platform', e.target.value)} aria-label="Filter by platform">
               <option value="all">All platforms</option>
-              {PLATFORMS.map((pl) => <option key={pl}>{pl}</option>)}
+              {model.platforms.map((pl) => <option key={pl}>{pl}</option>)}
             </select>
           </label>
           <label className="pill"><span>Role</span>
@@ -117,7 +117,7 @@ export function CapacityView({ pi }: { pi: PI }) {
             </select>
           </label>
           <Switch checked={g.gf.absent} onChange={(v) => setGf('absent', v)} label="Only with absences" ariaLabel="Only members with absences" />
-          {g.filtered && <button className="ghost" onClick={() => update(({ ui }) => { ui.gf = undefined })}>Clear filters</button>}
+          {g.filtered && <button className="ghost" onClick={() => update(({ ui }) => { ui.gf = undefined })}>Clear</button>}
         </div>
         <div className="scroll">
           <table className="grid">
@@ -129,7 +129,7 @@ export function CapacityView({ pi }: { pi: PI }) {
                 ))}
               </tr>
               <tr>
-                <th className="sticky mute">{g.gf.sprint === 'all' ? 'Member (total)' : 'Member (sprint total)'}</th>
+                <th className="sticky mute">Member</th>
                 {g.days.map((d) => (
                   <th key={d} className={`dh${starts.has(d) ? ' sb' : ''}`} title={`${wd(d)} ${fmt(d)}`}>{wd(d)[0]}<br />{+d.slice(8)}</th>
                 ))}
@@ -137,7 +137,7 @@ export function CapacityView({ pi }: { pi: PI }) {
               {groups.map(({ t, ms }) => <TeamRows key={t.id} t={t} ms={ms} days={g.days} starts={starts} />)}
             </tbody>
           </table>
-          {!groups.length && <div className="empty" style={{ marginTop: 10 }}>No members match these filters.</div>}
+          {!groups.length && <div className="empty" style={{ marginTop: 10 }}>No members match the filters.</div>}
         </div>
       </div>
     </>
@@ -153,7 +153,7 @@ function TeamRows({ t, ms, days, starts }: { t: Team; ms: Member[]; days: string
         <td className="sticky tnm">
           <span className="in">
             {t.name} <span className="mute" style={{ fontWeight: 400 }}>{n2(c.a)} / {c.w}</span>
-            <button className="ghost icon rst" onClick={() => ask('resetAvail', t.id)} title={`Reset availability of ${t.name}`} aria-label={`Reset availability of ${t.name}`}>
+            <button className="ghost icon rst" onClick={() => ask('resetAvail', t.id)} title="Reset" aria-label={`Reset availability of ${t.name}`}>
               <CycleIcon size={14} />
             </button>
           </span>
@@ -164,9 +164,9 @@ function TeamRows({ t, ms, days, starts }: { t: Team; ms: Member[]; days: string
         <tr key={m.id}>
           <td className="sticky nm">
             <div className="nmi">
-              <button className="av" onClick={() => openModal({ type: 'member', id: m.id })} title={`Availability details for ${m.name}`} aria-label={`Availability details for ${m.name}`}>{initials(m.name)}</button>
+              <button className="av" onClick={() => openModal({ type: 'member', id: m.id })} title="Details" aria-label={`Availability details for ${m.name}`}>{initials(m.name)}</button>
               <div className="nmt">{m.name}<small>{m.role}</small></div>
-              <b title="Available days in the shown period">{n2(model.sum(m.id, days))}</b>
+              <b title="Available days">{n2(model.sum(m.id, days))}</b>
             </div>
           </td>
           {days.map((d) => {
@@ -222,7 +222,7 @@ function StatSections({ list, withTabs, pi }: { list: StatMember[]; withTabs: bo
     <div className="hero">
       <h3>Availability</h3>
       <div className="mute" style={{ fontSize: '.85rem', marginTop: 2 }}>
-        {list.length} {list.length === 1 ? 'person' : 'people'}{off ? ` · excludes ${off} ${off === 1 ? 'day' : 'days'} off from public holidays and team days off` : ''}
+        {list.length} {list.length === 1 ? 'person' : 'people'}{off ? ` · ${off} ${off === 1 ? 'day' : 'days'} off excluded` : ''}
       </div>
       <div className="num">{n2(tot.a)}<span className="mute" style={{ fontSize: '.9rem', fontWeight: 400 }}> / {tot.w} days</span></div>
       <BarRow q={q} toneName={tone(q)} style={{ marginTop: 10 }} />
@@ -230,7 +230,7 @@ function StatSections({ list, withTabs, pi }: { list: StatMember[]; withTabs: bo
   )
   const sprints = (
     <div className="rlist">
-      {sp.map((d, i) => <RCard key={i} title={'Sprint ' + (i + 1)} sub={fmt(d[0]) + ' to ' + fmt(d[d.length - 1])} c={model.cap(list, d)} />)}
+      {sp.map((d, i) => <RCard key={i} title={'Sprint ' + (i + 1)} sub={fmt(d[0]) + ' – ' + fmt(d[d.length - 1])} c={model.cap(list, d)} />)}
     </div>
   )
   if (!withTabs) return <>{top}<div className="sub">By sprint</div>{sprints}</>
@@ -247,7 +247,7 @@ function StatSections({ list, withTabs, pi }: { list: StatMember[]; withTabs: bo
   let content = sprints
   if (tab === 'team') content = <>{teams.map((t) => ({ t, ms: list.filter((m) => m.tid === t.id) })).filter((x) => x.ms.length).map((x) => group(x.t.id, x.t.name, x.ms, (m) => m.role))}</>
   else if (tab === 'role') content = <>{a.roles.map((r) => ({ r, ms: list.filter((m) => m.role === r.name) })).filter((x) => x.ms.length).map((x) => group(x.r.id, x.r.name, x.ms, (m) => m.team))}</>
-  else if (tab === 'platform') content = <>{[...PLATFORMS, ''].map((pl) => ({ pl, ms: list.filter((m) => model.platOf(m.role) === pl) })).filter((x) => x.ms.length).map((x) => group(x.pl || 'other', x.pl || 'Other roles', x.ms, (m) => m.role))}</>
+  else if (tab === 'platform') content = <>{[...model.platforms, ''].map((pl) => ({ pl, ms: list.filter((m) => (pl ? model.covers(m.role, pl) : !model.platsOf(m.role).length)) })).filter((x) => x.ms.length).map((x) => group(x.pl || 'other', x.pl || 'No platform', x.ms, (m) => m.role))}</>
 
   return (
     <>
@@ -273,7 +273,7 @@ export function RoleStats({ role, pi }: { role: string; pi: PI }) {
         role === '__all' ||
         (role === '__planned' ? model.isPlanned(m.role)
           : role === '__unplanned' ? !model.isPlanned(m.role)
-          : role.startsWith('__plat:') ? model.platOf(m.role) === role.slice(7)
+          : role.startsWith('__plat:') ? model.covers(m.role, role.slice(7))
           : m.role === role))
       .map((m) => ({ ...m, team: t.name, tid: t.id })),
   )

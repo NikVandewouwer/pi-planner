@@ -1,22 +1,16 @@
-import { DEFAULT_VELOCITY, PLATFORMS } from './constants'
-import type { Art, AvailMap, DayOff, Feature, ISODate, Member, PI, Platform, Role, Team } from './types'
+import { DEFAULT_VELOCITY } from './constants'
+import type { Art, AvailMap, DayOff, Estimate, Feature, ISODate, Member, PI, Platform, Role, Team } from './types'
 import { num, piEnd, piSprints } from './util'
 
-export const fpts = (f: Feature, pl: Platform) => num(f.pts?.[pl]) || 0
-export const ftotal = (f: Feature) => PLATFORMS.reduce((x, pl) => x + fpts(f, pl), 0)
-export const fdel = (f: Feature, pl: Platform) => num(f.del?.[pl]) || 0
-export const fdelT = (f: Feature) => PLATFORMS.reduce((x, pl) => x + fdel(f, pl), 0)
-export const hasAnyDel = (f: Feature) => PLATFORMS.some((pl) => f.del && f.del[pl] != null)
+/** Estimated story points of a feature for one estimate (e.g. "Mobile"). */
+export const fest = (f: Feature, est: Estimate) => num(f.pts?.[est]) || 0
+/** Delivered story points of a feature for one estimate. */
+export const fdelEst = (f: Feature, est: Estimate) => num(f.del?.[est]) || 0
 
 export const tvel = (tm: Team, pl: Platform) => {
   const v = tm.velocity as unknown
   const n = v && typeof v === 'object' ? num((v as Record<string, unknown>)[pl]) : num(v)
   return n == null ? DEFAULT_VELOCITY : n
-}
-
-const platRank = (pl: string) => {
-  const i = PLATFORMS.indexOf(pl as Platform)
-  return i < 0 ? PLATFORMS.length : i
 }
 
 export interface PlanRow {
@@ -50,6 +44,7 @@ export interface PlanStats {
 export class Model {
   readonly teamOf: Record<string, string> = {}
   private readonly roles = new Map<string, Role>()
+  private readonly estByPlatform = new Map<Platform, Estimate>()
   private readonly closedCache = new Map<string, DayOff | null>()
   readonly art: Art
   readonly avail: AvailMap
@@ -59,12 +54,57 @@ export class Model {
     this.avail = avail
     art.teams.forEach((t) => t.members.forEach((m) => (this.teamOf[m.id] = t.id)))
     art.roles.forEach((r) => this.roles.set(r.name, r))
+    art.platforms.forEach((p) => this.estByPlatform.set(p.name, p.est))
   }
+
+  /* ---------- platforms & estimates ---------- */
+
+  /** Platform names in their configured order. */
+  get platforms(): Platform[] {
+    return this.art.platforms.map((p) => p.name)
+  }
+
+  /** Estimate names in the order their first platform appears. */
+  get ests(): Estimate[] {
+    return [...new Set(this.art.platforms.map((p) => p.est))]
+  }
+
+  estOf = (pl: Platform): Estimate => this.estByPlatform.get(pl) ?? pl
+  platformsOfEst = (est: Estimate) => this.platforms.filter((pl) => this.estOf(pl) === est)
+  /** How an estimate is shown: the platforms estimated together, e.g. "iOS + Android". The key itself is internal. */
+  estLabel = (est: Estimate) => this.platformsOfEst(est).join(' + ') || est
+  /** Platforms estimated together with this one (not including itself). */
+  partnersOf = (pl: Platform) => this.platformsOfEst(this.estOf(pl)).filter((x) => x !== pl)
+  private platRank = (pl: string) => {
+    const i = this.platforms.indexOf(pl)
+    return i < 0 ? this.platforms.length : i
+  }
+
+  /** Estimates a feature is sized in: those of the platforms that build it, once each. */
+  fests = (f: Feature): Estimate[] => [...new Set(f.platforms.map(this.estOf))]
+
+  /**
+   * Story points one platform has to build for a feature. Every platform that shares an
+   * estimate builds the whole ticket in parallel, so each carries the full estimate.
+   */
+  fpts = (f: Feature, pl: Platform) => (f.platforms.includes(pl) ? fest(f, this.estOf(pl)) : 0)
+
+  /** Size of the ticket: every estimate counted once, however many platforms build it. */
+  ftotal = (f: Feature) => this.fests(f).reduce((x, e) => x + fest(f, e), 0)
+  fdelT = (f: Feature) => this.fests(f).reduce((x, e) => x + fdelEst(f, e), 0)
+  hasAnyDel = (f: Feature) => this.fests(f).some((e) => f.del?.[e] != null)
 
   /* ---------- roles ---------- */
 
   isPlanned = (roleName: string) => !!this.roles.get(roleName)?.planned
-  platOf = (roleName: string): Platform | '' => this.roles.get(roleName)?.platform || ''
+  /** Platforms a role works on (only ones that exist). */
+  platsOf = (roleName: string): Platform[] => (this.roles.get(roleName)?.platforms || []).filter((pl) => this.estByPlatform.has(pl))
+  covers = (roleName: string, pl: Platform) => this.platsOf(roleName).includes(pl)
+  /** Part of a role's days that go to one platform: a QA on iOS and Android gives each half. */
+  share = (roleName: string, pl: Platform) => {
+    const ps = this.platsOf(roleName)
+    return ps.includes(pl) ? 1 / ps.length : 0
+  }
 
   sortedRoles = () =>
     this.art.roles
@@ -72,7 +112,7 @@ export class Model {
       .sort(
         (a, b) =>
           +!!a.planned - +!!b.planned ||
-          (a.planned ? platRank(a.platform) - platRank(b.platform) : 0) ||
+          (a.planned ? this.platRank(a.platforms[0] ?? '') - this.platRank(b.platforms[0] ?? '') || a.platforms.length - b.platforms.length : 0) ||
           a.name.localeCompare(b.name),
       )
 
@@ -83,7 +123,7 @@ export class Model {
       .map((x) => x[0])
 
   usedRole = (name: string) => this.art.teams.reduce((x, t) => x + t.members.filter((m) => m.role === name).length, 0)
-  missPlat = () => this.art.roles.filter((r) => r.planned && !r.platform)
+  missPlat = () => this.art.roles.filter((r) => r.planned && !this.platsOf(r.name).length)
 
   allMembers = () => this.art.teams.flatMap((t) => t.members.map((m) => ({ ...m, team: t.name, tid: t.id })))
 
@@ -134,17 +174,26 @@ export class Model {
 
   planDays = (pi: PI, tm: Team, pl?: Platform | null) => {
     const days = piSprints(pi).flat()
-    const ms = tm.members.filter((m) => this.isPlanned(m.role) && (pl == null || this.platOf(m.role) === pl))
-    return { a: ms.reduce((x, m) => x + this.sum(m.id, days), 0), w: ms.reduce((x, m) => x + this.work(m.id, days), 0) }
+    // a person counts fully for the whole team, and with their share for one platform
+    const part = (role: string) => (pl == null ? (this.platsOf(role).length ? 1 : 0) : this.share(role, pl))
+    const ms = tm.members.filter((m) => this.isPlanned(m.role) && part(m.role) > 0)
+    return {
+      a: ms.reduce((x, m) => x + part(m.role) * this.sum(m.id, days), 0),
+      w: ms.reduce((x, m) => x + part(m.role) * this.work(m.id, days), 0),
+    }
   }
 
+  /** Delivered SP a platform built in a PI (the delivered points of each ticket it worked on), or every ticket once. */
   delivered = (p: PI, tms: Team[], pl: Platform | null) =>
-    tms.reduce((s, t) => s + p.features.filter((f) => f.team === t.id).reduce((x, f) => x + (pl ? fdel(f, pl) : fdelT(f)), 0), 0)
+    tms.reduce(
+      (s, t) => s + p.features.filter((f) => f.team === t.id).reduce((x, f) => x + (pl ? (f.platforms.includes(pl) ? fdelEst(f, this.estOf(pl)) : 0) : this.fdelT(f)), 0),
+      0,
+    )
 
   hasDeliv = (p: PI, tms: Team[], pl: Platform | null) =>
-    tms.some((t) => p.features.some((f) => f.team === t.id && (pl ? f.del && f.del[pl] != null : hasAnyDel(f))))
+    tms.some((t) => p.features.some((f) => f.team === t.id && (pl ? f.platforms.includes(pl) && f.del?.[this.estOf(pl)] != null : this.hasAnyDel(f))))
 
-  /** Normalised velocity of a PI: delivered SP per 100 planning days. */
+  /** Normalised velocity of a PI: delivered SP per 100 planning days (of that platform's people). */
   nvel = (p: PI, tms: Team[], pl: Platform | null): number | null => {
     const ts = tms.filter((t) => this.hasDeliv(p, [t], pl))
     if (!ts.length) return null
@@ -156,10 +205,10 @@ export class Model {
     const past = this.art.pis.filter((p) => p !== pi && p.start < pi.start).sort((x, y) => x.start.localeCompare(y.start))
     const rows: PlanRow[] = []
     teams.forEach((tm) =>
-      PLATFORMS.forEach((pl) => {
-        const has = tm.members.some((m) => this.isPlanned(m.role) && this.platOf(m.role) === pl)
+      this.platforms.forEach((pl) => {
+        const has = tm.members.some((m) => this.isPlanned(m.role) && this.covers(m.role, pl))
         const fs = pi.features.filter((f) => f.team === tm.id)
-        if (!has && !fs.some((f) => fpts(f, pl) > 0)) return
+        if (!has && !fs.some((f) => this.fpts(f, pl) > 0)) return
         const vals = past.map((p) => this.nvel(p, [tm], pl)).filter((v): v is number => v != null)
         const hist = vals.length ? vals.reduce((x, y) => x + y, 0) / vals.length : null
         const tv = tvel(tm, pl)
@@ -175,8 +224,8 @@ export class Model {
           pd,
           basis: hist != null ? 'history' : 'default',
           fc: (rate * pd) / 100,
-          committed: fs.filter((f) => f.status === 'Committed').reduce((x, f) => x + fpts(f, pl), 0),
-          total: fs.reduce((x, f) => x + fpts(f, pl), 0),
+          committed: fs.filter((f) => f.status === 'Committed').reduce((x, f) => x + this.fpts(f, pl), 0),
+          total: fs.reduce((x, f) => x + this.fpts(f, pl), 0),
         })
       }),
     )
@@ -188,7 +237,7 @@ export class Model {
   /** Planning members of a team on the given platforms. */
   ftMembers = (tid: string, pls: Platform[]) => {
     const tm = this.art.teams.find((x) => x.id === tid)
-    return tm ? tm.members.filter((m) => this.isPlanned(m.role) && pls.includes(this.platOf(m.role) as Platform)) : []
+    return tm ? tm.members.filter((m) => this.isPlanned(m.role) && this.platsOf(m.role).some((pl) => pls.includes(pl))) : []
   }
 
   fAsg = (f: Feature) => {
@@ -203,11 +252,11 @@ export class Model {
     const tm = this.art.teams.find((x) => x.id === f.team)
     const out: { pl: Platform; w: number; diff: number }[] = []
     if (!tm) return out
-    PLATFORMS.forEach((pl) => {
+    this.platforms.forEach((pl) => {
       let w = 0
       let any = false
       tm.members.forEach((m) => {
-        if ((f.who || []).includes(m.id) && this.isPlanned(m.role) && this.platOf(m.role) === pl) {
+        if ((f.who || []).includes(m.id) && this.isPlanned(m.role) && this.covers(m.role, pl)) {
           const n = num((f.wt || {})[m.id])
           if (n != null && n > 0) {
             w += n

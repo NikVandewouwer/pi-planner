@@ -1,8 +1,11 @@
-import type { GridFilter, Platform, Size, Status } from './types'
+import type { GridFilter, Size, Status } from './types'
 
 export const STORAGE_KEY = 'art-pi-planner:v1'
 
-export const PLATFORMS: Platform[] = ['Frontend', 'Backend']
+/** Platforms of a new train: iOS and Android build every Mobile ticket in parallel. */
+export const DEFAULT_PLATFORMS: [name: string, est: string][] = [['iOS', 'Mobile'], ['Android', 'Mobile'], ['Backend', 'Backend']]
+/** Platforms of data stored before platforms were configurable. */
+export const LEGACY_PLATFORMS = ['Frontend', 'Backend']
 export const VALS = [1, 0.75, 0.5, 0.25, 0]
 export const SIZES: Size[] = ['XS', 'S', 'M', 'L', 'XL']
 export const STATUSES: Status[] = ['Committed', 'Uncommitted', 'New']

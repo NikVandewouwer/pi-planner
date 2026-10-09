@@ -1,8 +1,8 @@
 import { useRef, useState, type CSSProperties, type FormEvent, type InputHTMLAttributes, type KeyboardEvent } from 'react'
-import { PLATFORMS, ROLE_SUGGEST } from '../domain/constants'
+import { ROLE_SUGGEST } from '../domain/constants'
 import { nextTypeColor } from '../domain/migrate'
 import { tvel } from '../domain/model'
-import type { Member, PI, Platform, Role, Team } from '../domain/types'
+import type { Member, PI, Role, Team } from '../domain/types'
 import { fmt, nextPIStart, num, piEnd, toMonday, uid } from '../domain/util'
 import { addTeam, ask, closeModal, openModal } from '../state/actions'
 import { artOf, update, useArt, useModel } from '../state/store'
@@ -60,10 +60,10 @@ export function TeamEditor({ t, withMembers, flat }: { t: Team; withMembers?: bo
         />
       </label>
       <div className="fsec" style={{ marginTop: 10 }}>
-        Velocity <Info size={16} text="Story points this team delivers per 100 days of its planning roles. It is only used to forecast until the team has delivered story points in an earlier Program Increment; after that the real average takes over." />
+        Default velocity <Info size={16} text="Story points per 100 planning days, used until the team has delivered features in an earlier PI." />
       </div>
       <div className="ff2">
-        {PLATFORMS.map((pl) => (
+        {model.platforms.map((pl) => (
           <label className="f" key={pl}>
             {pl}
             <CommitInput
@@ -82,7 +82,7 @@ export function TeamEditor({ t, withMembers, flat }: { t: Team; withMembers?: bo
           <div className="fsec" style={{ marginTop: 10 }}>Members</div>
           <div className="mcards">
             {model.sortedMembers(t.members).map((m) => <MemberCard key={m.id} m={m} />)}
-            <button className="mcard add" onClick={() => openModal({ type: 'member-edit', id: 'new:' + t.id })}>+ Add member</button>
+            <button className="mcard add" onClick={() => openModal({ type: 'member-edit', id: 'new:' + t.id })}>+ Add</button>
           </div>
         </>
       )}
@@ -95,8 +95,8 @@ export function MemberCard({ m }: { m: Member }) {
   const model = useModel()
   const inp = model.isPlanned(m.role)
   return (
-    <div className={`mcard ${inp ? 'in' : 'out'} clickable`} {...clickable(() => openModal({ type: 'member-edit', id: m.id }))} title={`Edit ${m.name} · ${m.role}`}>
-      <button className="xcorner" onClick={(e) => { e.stopPropagation(); ask('member', m.id) }} title="Delete member" aria-label={`Delete ${m.name}`}>
+    <div className={`mcard ${inp ? 'in' : 'out'} clickable`} {...clickable(() => openModal({ type: 'member-edit', id: m.id }))} title={`${m.name} · ${m.role}`}>
+      <button className="xcorner" onClick={(e) => { e.stopPropagation(); ask('member', m.id) }} title="Delete" aria-label={`Delete ${m.name}`}>
         <XIcon />
       </button>
       <div className="mtop">
@@ -115,7 +115,7 @@ export function TeamsView() {
     <>
       <div className="row">
         <span className="grow mute">{a.teams.length} {a.teams.length === 1 ? 'team' : 'teams'}, {ms.length} {ms.length === 1 ? 'member' : 'members'}</span>
-        <button className="primary" onClick={() => openModal({ type: 'newTeam' })}>Add team</button>
+        <button className="primary" onClick={() => openModal({ type: 'newTeam' })}>Add</button>
       </div>
       {a.teams.length ? a.teams.map((t) => (
         <section className="tsec" key={t.id}>
@@ -124,7 +124,7 @@ export function TeamsView() {
               <h3>{t.name} <span className="mute" style={{ fontWeight: 600 }}>({t.members.length})</span></h3>
               <div className="vchips">
                 <span className="mute" style={{ fontSize: '.78rem', alignSelf: 'center' }}>Velocity</span>
-                {PLATFORMS.map((pl) => <span className="vchip" key={pl}>{pl} <b>{+tvel(t, pl).toFixed(2)} SP</b></span>)}
+                {model.platforms.map((pl) => <span className="vchip" key={pl}>{pl} <b>{+tvel(t, pl).toFixed(2)} SP</b></span>)}
               </div>
             </div>
             <div className="acts">
@@ -134,7 +134,7 @@ export function TeamsView() {
           </div>
           <div className="mcards">
             {model.sortedMembers(t.members).map((m) => <MemberCard key={m.id} m={m} />)}
-            <button className="mcard add" onClick={() => openModal({ type: 'member-edit', id: 'new:' + t.id })}>+ Add member</button>
+            <button className="mcard add" onClick={() => openModal({ type: 'member-edit', id: 'new:' + t.id })}>+ Add</button>
           </div>
         </section>
       )) : <div className="empty">No teams yet.</div>}
@@ -147,16 +147,16 @@ export function NewTeamForm() {
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const name = (e.currentTarget.elements.namedItem('name') as HTMLInputElement).value.trim()
-    if (!name) return setErr('Please enter a name.')
+    if (!name) return setErr('Enter a name.')
     update((d) => { const id = addTeam(d, name); d.ui.modal = { type: 'team', id } })
   }
   return (
     <>
-      <h2>Add team</h2>
+      <h2>New team</h2>
       <form className="row" onSubmit={submit}>
-        <input name="name" placeholder="Team name" autoFocus className={err ? 'invalid' : ''} onInput={() => setErr(null)} />
+        <input name="name" placeholder="e.g. Vega" autoFocus className={err ? 'invalid' : ''} onInput={() => setErr(null)} />
         <Err msg={err} />
-        <button className="primary">Create team</button>
+        <button className="primary">Add</button>
       </form>
     </>
   )
@@ -181,7 +181,7 @@ export function MemberForm({ id }: { id: string }) {
     const el = e.currentTarget.elements
     const name = (el.namedItem('name') as HTMLInputElement).value.trim()
     const role = (el.namedItem('role') as HTMLSelectElement).value
-    if (!name) return setErr('Please enter a name.')
+    if (!name) return setErr('Enter a name.')
     update(({ S, ui }) => {
       const t = artOf(S)?.teams.find((x) => x.id === team.id)
       if (t) {
@@ -193,7 +193,7 @@ export function MemberForm({ id }: { id: string }) {
   }
   return (
     <>
-      <h2 style={{ marginBottom: 14 }}>{m ? 'Edit member' : 'Add member'} <span className="mute" style={{ fontWeight: 600 }}>{team.name}</span></h2>
+      <h2 style={{ marginBottom: 14 }}>{m ? 'Edit member' : 'New member'} <span className="mute" style={{ fontWeight: 600 }}>{team.name}</span></h2>
       <form className="ff" onSubmit={submit}>
         <label className="f">Name<input name="name" defaultValue={m?.name ?? ''} autoFocus className={err ? 'invalid' : ''} onInput={() => setErr(null)} /><Err msg={err} /></label>
         <label className="f">Role
@@ -205,7 +205,7 @@ export function MemberForm({ id }: { id: string }) {
           {m ? <button type="button" className="ghost danger" onClick={() => ask('member', m!.id)}>Delete</button> : <span />}
           <div className="row" style={{ margin: 0 }}>
             <button type="button" onClick={closeModal}>Cancel</button>
-            <button className="primary">{m ? 'Save' : 'Add member'}</button>
+            <button className="primary">{m ? 'Save' : 'Add'}</button>
           </div>
         </div>
       </form>
@@ -269,14 +269,14 @@ function MemberAddForm({ team }: { team: Team }) {
       ui.modal = null
     })
   }
-  const label = draft.length > 1 ? `Add ${draft.length} members` : 'Add member'
+  const label = draft.length > 1 ? `Add ${draft.length}` : 'Add'
 
   return (
     <>
-      <h2 style={{ marginBottom: 14 }}>Add members <span className="mute" style={{ fontWeight: 600 }}>{team.name}</span></h2>
+      <h2 style={{ marginBottom: 14 }}>New members <span className="mute" style={{ fontWeight: 600 }}>{team.name}</span></h2>
       <form className="ff" autoComplete="off" onSubmit={submit}>
         <div className="ra-wrap">
-          <div className="ra-lab">Names</div>
+          <div className="ra-lab">Names <Info size={14} text="Type a name and press Tab or Enter to add the next one." /></div>
           <div className={`ra-field${err ? ' invalid' : ''}`} onClick={() => inRef.current?.focus()}>
             {draft.map((d) => (
               <span className="ra-badge" key={d.id}>
@@ -293,21 +293,19 @@ function MemberAddForm({ team }: { team: Team }) {
               autoComplete="off"
               autoCapitalize="words"
               aria-label="Member name"
-              placeholder={draft.length ? 'Add another name' : 'e.g. Ada Lovelace'}
+              placeholder={draft.length ? '' : 'e.g. Ada Lovelace'}
               value={text}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={onKeyDown}
             />
           </div>
           <div><Err msg={err} /></div>
-          <p className="mute" style={{ margin: '6px 0 0', fontSize: '.8rem' }}>Type a name and press Tab or Enter. Each one becomes a chip, so you can add several people before saving.</p>
         </div>
         <label className="f">Role
           <select name="role" defaultValue={a.roles[0]?.name ?? ''}>
             {a.roles.map((r) => <option key={r.id}>{r.name}</option>)}
           </select>
         </label>
-        <p className="mute" style={{ margin: '-4px 0 0', fontSize: '.8rem' }}>Applies to everyone you add here.</p>
         <div className="row" style={{ justifyContent: 'flex-end', marginTop: 10 }}>
           <button type="button" onClick={closeModal}>Cancel</button>
           <button className="primary">{label}</button>
@@ -319,22 +317,48 @@ function MemberAddForm({ team }: { team: Team }) {
 
 /* ---------- roles ---------- */
 
+/** Toggle chips for the platforms a role works on. Several = their days are split evenly. */
+function PlatformPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const model = useModel()
+  const pct = value.length > 1 ? Math.round(1000 / value.length) / 10 : 100
+  return (
+    <div className="f">
+      <span>Platforms <Info size={14} text="Pick several when the role works across platforms, like a QA who tests iOS and Android. Their days are then split evenly." /></span>
+      <div className="ft-plats" style={{ marginTop: 0 }}>
+        {model.platforms.map((pl) => {
+          const on = value.includes(pl)
+          return (
+            <label key={pl} className={`ft-chip${on ? ' on' : ''}`}>
+              <input type="checkbox" checked={on} onChange={(e) => onChange(model.platforms.filter((x) => (x === pl ? e.target.checked : value.includes(x))))} />
+              {pl}
+            </label>
+          )
+        })}
+      </div>
+      {value.length > 1 && (
+        <p className="mute" style={{ margin: 0, fontSize: '.8rem' }}>Their days are split evenly: {value.map((pl) => `${pl} ${pct}%`).join(' · ')}.</p>
+      )}
+    </div>
+  )
+}
+
 function RoleCard({ r, plain }: { r: Role; plain?: boolean }) {
   const model = useModel()
-  const warn = r.planned && !r.platform
+  const plats = model.platsOf(r.name)
+  const warn = r.planned && !plats.length
   const used = model.usedRole(r.name)
   return (
     <div
       className={`mcard ${r.planned ? 'in' : 'out'}${plain ? '' : ' clickable'}`}
       {...(plain ? {} : clickable(() => openModal({ type: 'role-edit', id: r.id })))}
-      title={`${r.name}${r.planned ? ' · included in planning' : ' · excluded from planning'}`}
+      title={r.name}
     >
       {!plain && (
         <button
           className="xcorner"
           disabled={!!used}
           onClick={(e) => { e.stopPropagation(); ask('role', r.id) }}
-          title={used ? `In use by ${used}${used === 1 ? ' member' : ' members'}` : 'Delete role'}
+          title={used ? `Used by ${used} ${used === 1 ? 'member' : 'members'}` : 'Delete'}
           aria-label={`Delete role ${r.name}`}
         >
           <XIcon />
@@ -343,7 +367,7 @@ function RoleCard({ r, plain }: { r: Role; plain?: boolean }) {
       <div className="mtop">
         <div className="nmt">
           <b>{r.name}</b>
-          <small style={warn ? { color: 'var(--warn)', fontWeight: 700 } : undefined}>{r.planned ? (warn ? 'Pick a platform' : r.platform) : 'Not in planning'}</small>
+          <small style={warn ? { color: 'var(--warn)', fontWeight: 700 } : undefined}>{r.planned ? (warn ? 'No platform' : plats.join(' + ')) : 'Not in planning'}</small>
         </div>
       </div>
     </div>
@@ -355,20 +379,18 @@ export function RolesView() {
   const miss = model.missPlat()
   return (
     <>
-      <p className="help">
-        These are the roles you can give the people in your teams. Switch on <b>Included in planning</b> for the roles that build the product, typically developers and QA. Only their available days count towards velocity and forecast, so roles such as Scrum Master or Product Owner stay switched off. A role included in planning also needs a <b>platform</b>, because velocity, forecast and story points are split between Frontend and Backend.
-      </p>
+      <p className="help">The roles people in your teams can have.</p>
       <div className="panel">
-        <div className="fsec">Roles</div>
+        <div className="fsec">Roles <Info size={14} text="Only roles included in planning count towards velocity and forecast, usually developers and QA. Each needs at least one platform." /></div>
         <div className="rcards">
           {model.sortedRoles().map((r) => <RoleCard key={r.id} r={r} />)}
-          <button className="mcard add" onClick={() => openModal({ type: 'role-edit', id: 'new' })}>+ Add roles</button>
+          <button className="mcard add" onClick={() => openModal({ type: 'role-edit', id: 'new' })}>+ Add</button>
         </div>
         {miss.length > 0 && (
           <div className="note">
             <b>!</b>
             <div>
-              <b>{miss.map((r) => r.name).join(', ')}</b> {miss.length === 1 ? 'is' : 'are'} included in planning without a platform. Velocity and forecast are split per platform, so {miss.length === 1 ? 'its' : 'their'} days are left out until you pick one.
+              <b>{miss.map((r) => r.name).join(', ')}</b> {miss.length === 1 ? 'has' : 'have'} no platform, so {miss.length === 1 ? 'its' : 'their'} days are left out of the forecast.
             </div>
           </div>
         )}
@@ -382,14 +404,15 @@ export function RoleEditForm({ id }: { id: string }) {
   const model = useModel()
   const r = a.roles.find((x) => x.id === id)
   const [planned, setPlanned] = useState(r?.planned ?? true)
+  const [plats, setPlats] = useState<string[]>(() => (r ? model.platsOf(r.name) : []))
   const [err, setErr] = useState<string | null>(null)
   if (!r) return <RoleAddForm />
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const el = e.currentTarget.elements
     const name = (el.namedItem('name') as HTMLInputElement).value.trim()
-    const platform = planned ? ((el.namedItem('platform') as HTMLSelectElement).value as Platform) : ''
-    if (!name) return setErr('Please enter a name.')
+    if (!name) return setErr('Enter a name.')
+    if (planned && !plats.length) return setErr('Pick at least one platform.')
     if (a.roles.some((x) => x.id !== r.id && x.name.toLowerCase() === name.toLowerCase())) return setErr('A role with this name already exists.')
     update(({ S, ui }) => {
       const ar = artOf(S)
@@ -398,7 +421,7 @@ export function RoleEditForm({ id }: { id: string }) {
         ar.teams.forEach((tm) => tm.members.forEach((m) => { if (m.role === rr.name) m.role = name }))
         rr.name = name
         rr.planned = planned
-        rr.platform = platform
+        rr.platforms = planned ? plats : []
       }
       ui.modal = null
     })
@@ -410,10 +433,7 @@ export function RoleEditForm({ id }: { id: string }) {
         <label className="f">Name<input name="name" defaultValue={r.name} autoFocus placeholder="e.g. Backend developer" className={err ? 'invalid' : ''} onInput={() => setErr(null)} /><Err msg={err} /></label>
         <Switch checked={planned} onChange={setPlanned} label="Included in planning" style={{ margin: '4px 0' }} />
         <div hidden={!planned}>
-          <label className="f">Platform
-            <select name="platform" defaultValue={r.platform || PLATFORMS[0]}>{PLATFORMS.map((pl) => <option key={pl}>{pl}</option>)}</select>
-          </label>
-          <p className="mute" style={{ margin: '6px 0 0', fontSize: '.8rem' }}>Velocity, forecast and story points are split per platform, so a role included in planning needs one.</p>
+          <PlatformPicker value={plats} onChange={(v) => { setPlats(v); setErr(null) }} />
         </div>
         <div className="row" style={{ justifyContent: 'space-between', marginTop: 10 }}>
           <button type="button" className="ghost danger" disabled={!!model.usedRole(r.name)} onClick={() => ask('role', r.id)}>Delete</button>
@@ -434,10 +454,11 @@ function RoleAddForm() {
   const a = useArt()
   const [draft, setDraft] = useState<{ id: string; name: string }[]>([])
   const [text, setText] = useState('')
-  const [open, setOpen] = useState(false)
-  const [hi, setHi] = useState(0)
+  /** Highlighted suggestion for the keyboard, -1 for none */
+  const [hi, setHi] = useState(-1)
   const [err, setErr] = useState<string | null>(null)
   const [planned, setPlanned] = useState(true)
+  const [plats, setPlats] = useState<string[]>(() => a.platforms.slice(0, 1).map((p) => p.name))
   const inRef = useRef<HTMLInputElement>(null)
 
   const taken = (n: string, d = draft) => { const k = raKey(n); return a.roles.some((r) => raKey(r.name) === k) || d.some((r) => raKey(r.name) === k) }
@@ -450,8 +471,9 @@ function RoleAddForm() {
     if (q && !ROLE_SUGGEST.some((s) => raKey(s) === q) && !taken(typed)) items.push({ name: typed, custom: true })
     return items
   }
-  const items = open ? list(text) : []
-  const hiIdx = Math.min(hi, Math.max(0, items.length - 1))
+  // suggestions stay visible, so several can be picked in a row
+  const items = list(text)
+  const hiIdx = hi < 0 ? -1 : Math.min(hi, items.length - 1)
 
   /** Turns raw text into a badge. Returns the new draft, or null when it is a duplicate. */
   const commitText = (raw: string, d = draft): typeof draft | null => {
@@ -466,7 +488,7 @@ function RoleAddForm() {
     if (taken(it.name)) { setErr(`“${it.name}” already exists as a role.`); return }
     const next = it.custom ? commitText(text) : [...draft, { id: uid(), name: it.name }]
     if (!next) return
-    setDraft(next); setText(''); setHi(0); setOpen(false)
+    setDraft(next); setText(''); setHi(-1)
     inRef.current?.focus()
   }
 
@@ -480,23 +502,23 @@ function RoleAddForm() {
       setDraft(d)
       v = rest
     }
-    setText(v); setHi(0); setOpen(!!v.trim())
+    setText(v); setHi(v.trim() ? 0 : -1)
   }
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault()
-      if (!items.length) { setHi(0); setOpen(true); return }
-      setHi((hiIdx + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length)
+      if (!items.length) return
+      setHi(hiIdx < 0 ? (e.key === 'ArrowDown' ? 0 : items.length - 1) : (hiIdx + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length)
     } else if (e.key === 'Enter') {
-      if (!text.trim()) return
+      const it = hiIdx >= 0 ? items[hiIdx] : null
+      if (!it && !text.trim()) return
       e.preventDefault()
-      const it = items.length ? items[hiIdx] : null
       if (it) pick(it)
-      else { const n = commitText(text); if (n) { setDraft(n); setText(''); setOpen(false) } }
-    } else if (e.key === 'Escape' && items.length) {
-      e.preventDefault(); e.stopPropagation(); setOpen(false)
+      else { const n = commitText(text); if (n) { setDraft(n); setText('') } }
+    } else if (e.key === 'Escape' && hiIdx >= 0) {
+      e.preventDefault(); e.stopPropagation(); setHi(-1)
     } else if (e.key === 'Backspace' && !text && draft.length) {
-      setDraft(draft.slice(0, -1)); setOpen(false)
+      setDraft(draft.slice(0, -1))
     }
   }
   const submit = (e: FormEvent<HTMLFormElement>) => {
@@ -504,26 +526,27 @@ function RoleAddForm() {
     const d = commitText(text)
     if (!d) return
     if (!d.length) { setErr('Add at least one role.'); inRef.current?.focus(); return }
-    const platform = planned ? ((e.currentTarget.elements.namedItem('platform') as HTMLSelectElement).value as Platform) : ''
+    if (planned && !plats.length) { setErr('Pick at least one platform.'); return }
+    const platforms = planned ? plats : []
     update(({ S, ui }) => {
       const ar = artOf(S)
-      d.forEach((x) => { if (ar && !ar.roles.some((r) => raKey(r.name) === raKey(x.name))) ar.roles.push({ id: uid(), name: x.name, planned, platform }) })
+      d.forEach((x) => { if (ar && !ar.roles.some((r) => raKey(r.name) === raKey(x.name))) ar.roles.push({ id: uid(), name: x.name, planned, platforms }) })
       ui.modal = null
     })
   }
-  const label = draft.length > 1 ? `Add ${draft.length} roles` : draft.length === 1 ? 'Add role' : 'Add roles'
+  const label = draft.length > 1 ? `Add ${draft.length}` : 'Add'
 
   return (
     <>
-      <h2 style={{ marginBottom: 14 }}>Add roles</h2>
+      <h2 style={{ marginBottom: 14 }}>New roles</h2>
       <form className="ff" autoComplete="off" onSubmit={submit}>
         <div className="ra-wrap">
-          <div className="ra-lab">Roles</div>
-          <div className={`ra-field${err ? ' invalid' : ''}`} onClick={() => { inRef.current?.focus(); setOpen(true) }}>
+          <div className="ra-lab">Roles <Info size={14} text="Type a role and press Enter, or pick suggestions to add several at once." /></div>
+          <div className={`ra-field${err ? ' invalid' : ''}`} onClick={() => inRef.current?.focus()}>
             {draft.map((d) => (
               <span className="ra-badge" key={d.id}>
                 <span title={d.name}>{d.name}</span>
-                <button type="button" className="ra-x" aria-label={`Remove ${d.name}`} onClick={(e) => { e.stopPropagation(); setDraft(draft.filter((x) => x.id !== d.id)); setOpen(false); inRef.current?.focus() }}>
+                <button type="button" className="ra-x" aria-label={`Remove ${d.name}`} onClick={(e) => { e.stopPropagation(); setDraft(draft.filter((x) => x.id !== d.id)); inRef.current?.focus() }}>
                   <XIcon />
                 </button>
               </span>
@@ -535,30 +558,35 @@ function RoleAddForm() {
               autoComplete="off"
               autoCapitalize="words"
               aria-label="Role name"
-              placeholder={draft.length ? 'Add another role' : 'e.g. iOS Engineer'}
+              placeholder={draft.length ? '' : 'e.g. iOS Engineer'}
               value={text}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={onKeyDown}
-              onBlur={() => setOpen(false)}
+              onBlur={() => setHi(-1)}
             />
           </div>
+          <div><Err msg={err} /></div>
           {items.length > 0 && (
-            <div className="ra-sug" role="listbox" onMouseDown={(e) => e.preventDefault()}>
+            <div className="ra-pills" role="listbox" aria-label="Suggested roles" onMouseDown={(e) => e.preventDefault()}>
               {items.map((s, i) => (
-                <div key={s.name + i} className={`ra-opt${i === hiIdx ? ' on' : ''}${s.custom ? ' new' : ''}`} role="option" aria-selected={i === hiIdx} onClick={() => pick(s)}>
-                  <b>{s.custom ? `Add “${s.name}”` : s.name}</b>
-                  {s.custom && <small>New role</small>}
-                </div>
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  key={s.name + i}
+                  className={`ra-pill${i === hiIdx ? ' on' : ''}${s.custom ? ' new' : ''}`}
+                  role="option"
+                  aria-selected={i === hiIdx}
+                  onClick={() => pick(s)}
+                >
+                  + {s.name}
+                </button>
               ))}
             </div>
           )}
-          <div><Err msg={err} /></div>
-          <p className="mute" style={{ margin: '6px 0 0', fontSize: '.8rem' }}>Type a role and press Enter, or pick a suggestion. Each one becomes a badge, so you can add several before saving.</p>
         </div>
         <Switch checked={planned} onChange={setPlanned} label="Included in planning" style={{ margin: '4px 0' }} />
         <div hidden={!planned}>
-          <label className="f">Platform<select name="platform">{PLATFORMS.map((pl) => <option key={pl}>{pl}</option>)}</select></label>
-          <p className="mute" style={{ margin: '6px 0 0', fontSize: '.8rem' }}>Applies to all the roles you add here. Velocity, forecast and story points are split per platform, so a role included in planning needs one.</p>
+          <PlatformPicker value={plats} onChange={(v) => { setPlats(v); setErr(null) }} />
         </div>
         <div className="row" style={{ justifyContent: 'flex-end', marginTop: 10 }}>
           <button type="button" onClick={closeModal}>Cancel</button>
@@ -582,7 +610,7 @@ function TypeRow({ typeId, draftId, onCreated }: { typeId?: string; draftId?: st
     return (
       <div className="typerow draft">
         <input
-          placeholder="New feature type"
+          placeholder="Add a type"
           aria-label="New feature type"
           value={v}
           onChange={(e) => {
@@ -625,7 +653,7 @@ function TypeRow({ typeId, draftId, onCreated }: { typeId?: string; draftId?: st
           } else if (nv !== type.name) setV(type.name)
         }}
       />
-      <button className="ghost icon" disabled={n > 0} onClick={() => ask('ftype', type.id)} title={n > 0 ? `In use by ${n}${n === 1 ? ' feature' : ' features'}` : 'Delete type'} aria-label={`Delete type ${type.name}`}>
+      <button className="ghost icon" disabled={n > 0} onClick={() => ask('ftype', type.id)} title={n > 0 ? `Used by ${n} ${n === 1 ? 'feature' : 'features'}` : 'Delete'} aria-label={`Delete type ${type.name}`}>
         <XIcon />
       </button>
     </div>
@@ -637,7 +665,7 @@ export function TypesView() {
   const [draftId, setDraftId] = useState(uid)
   return (
     <>
-      <p className="help">Feature types belong to this Agile Release Train and are offered when you add a feature. Type in the empty row to add one. A type that features still use can't be deleted.</p>
+      <p className="help">Types to label features with. Type in the empty row to add one.</p>
       <div className="panel">
         <div className="fsec">Feature types</div>
         <div style={{ marginTop: 6 }}>
@@ -658,7 +686,7 @@ function OffSection({ p }: { p: PI }) {
   const [err, setErr] = useState<{ field: string; msg: string } | null>(null)
   const nameRef = useRef<HTMLInputElement>(null)
   const end = piEnd(p)
-  const nm = (s: string) => (s === 'all' ? 'All teams (public holiday)' : (a.teams.find((t) => t.id === s) || { name: 'Removed team' }).name)
+  const nm = (s: string) => (s === 'all' ? 'All teams' : (a.teams.find((t) => t.id === s) || { name: 'Deleted team' }).name)
   const list = p.off.slice().sort((x, y) => x.from.localeCompare(y.from))
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -668,12 +696,12 @@ function OffSection({ p }: { p: PI }) {
     let from = (el.namedItem('from') as HTMLInputElement).value
     let to = (el.namedItem('to') as HTMLInputElement).value || from
     const scope = (el.namedItem('scope') as HTMLSelectElement).value
-    if (!name) return setErr({ field: 'name', msg: 'Please enter a name.' })
-    if (!from) return setErr({ field: 'from', msg: 'Please pick a start date.' })
+    if (!name) return setErr({ field: 'name', msg: 'Enter a name.' })
+    if (!from) return setErr({ field: 'from', msg: 'Pick a start date.' })
     if (to < from) [from, to] = [to, from]
     from = from < p.start ? p.start : from
     to = to > end ? end : to
-    if (from > to) return setErr({ field: 'from', msg: 'Those dates fall outside this Program Increment.' })
+    if (from > to) return setErr({ field: 'from', msg: 'These dates are outside this PI.' })
     update(({ S }) => { artOf(S)?.pis.find((x) => x.id === p.id)?.off.push({ id: uid(), name, from, to, scope }) })
     form.reset()
     nameRef.current?.focus()
@@ -681,8 +709,8 @@ function OffSection({ p }: { p: PI }) {
   const ec = (f: string) => (err?.field === f ? 'invalid' : '')
   return (
     <div style={{ borderTop: '1px solid var(--line)', marginTop: 18, paddingTop: 16 }}>
-      <h3>Days off in this Program Increment</h3>
-      <p className="mute">Public holidays apply to all teams, team days off to one team. Dates are limited to {fmt(p.start)} to {fmt(end)}.</p>
+      <h3>Days off</h3>
+      <p className="mute">Holidays and team days off between {fmt(p.start)} and {fmt(end)}. They count as unavailable for everyone they apply to.</p>
       {list.length ? (
         <div className="scroll">
           <table>
@@ -690,7 +718,7 @@ function OffSection({ p }: { p: PI }) {
               {list.map((o) => (
                 <tr key={o.id}>
                   <td>{o.name}</td>
-                  <td>{fmt(o.from)}{o.to !== o.from ? ' to ' + fmt(o.to) : ''}</td>
+                  <td>{fmt(o.from)}{o.to !== o.from ? ' – ' + fmt(o.to) : ''}</td>
                   <td className="mute">{nm(o.scope)}</td>
                   <td><button className="ghost danger" onClick={() => ask('off', o.id)}>Delete</button></td>
                 </tr>
@@ -702,14 +730,14 @@ function OffSection({ p }: { p: PI }) {
       <form className="row" style={{ alignItems: 'flex-end' }} onSubmit={submit} onInput={() => setErr(null)}>
         <label className="f" style={{ flex: '1 1 200px' }}>Name<input ref={nameRef} name="name" placeholder="e.g. Easter Monday" className={ec('name')} />{err?.field === 'name' && <Err msg={err.msg} />}</label>
         <label className="f">From<input type="date" name="from" min={p.start} max={end} className={ec('from')} />{err?.field === 'from' && <Err msg={err.msg} />}</label>
-        <label className="f">To (optional)<input type="date" name="to" min={p.start} max={end} /></label>
+        <label className="f">To<input type="date" name="to" min={p.start} max={end} /></label>
         <label className="f">Applies to
           <select name="scope">
             <option value="all">All teams (public holiday)</option>
             {a.teams.map((t) => <option key={t.id} value={t.id}>{t.name} only</option>)}
           </select>
         </label>
-        <button className="primary">Add days off</button>
+        <button className="primary">Add</button>
       </form>
     </div>
   )
@@ -725,8 +753,8 @@ export function PIForm({ id, tab }: { id: string; tab: 'details' | 'off' }) {
     const el = e.currentTarget.elements
     const val = (n: string) => (el.namedItem(n) as HTMLInputElement).value
     const name = val('name').trim()
-    if (!name) return setErr({ field: 'name', msg: 'Please enter a name.' })
-    if (!val('start')) return setErr({ field: 'start', msg: 'Please pick a start date.' })
+    if (!name) return setErr({ field: 'name', msg: 'Enter a name.' })
+    if (!val('start')) return setErr({ field: 'start', msg: 'Pick a start date.' })
     const o = {
       name,
       start: toMonday(val('start')),
@@ -749,24 +777,24 @@ export function PIForm({ id, tab }: { id: string; tab: 'details' | 'off' }) {
   const ec = (f: string) => (err?.field === f ? 'invalid' : '')
   const form = (
     <form className="ff" onSubmit={submit} onInput={() => setErr(null)}>
-      <label className="f">Name or number<input name="name" defaultValue={v.name} autoFocus placeholder="e.g. 2026.4" className={ec('name')} />{err?.field === 'name' && <Err msg={err.msg} />}</label>
+      <label className="f">Name<input name="name" defaultValue={v.name} autoFocus placeholder="e.g. 2026.4" className={ec('name')} />{err?.field === 'name' && <Err msg={err.msg} />}</label>
       <label className="f">Start date<input type="date" name="start" defaultValue={v.start} className={ec('start')} />{err?.field === 'start' && <Err msg={err.msg} />}</label>
       <div className="ff2">
-        <label className="f">Number of sprints<input type="number" name="sprints" min={1} max={12} defaultValue={v.sprints} /></label>
-        <label className="f">Sprint length (weeks)<input type="number" name="weeks" min={1} max={4} defaultValue={v.weeks} /></label>
+        <label className="f">Sprints<input type="number" name="sprints" min={1} max={12} defaultValue={v.sprints} /></label>
+        <label className="f">Weeks per sprint<input type="number" name="weeks" min={1} max={4} defaultValue={v.weeks} /></label>
       </div>
-      <p className="mute" style={{ margin: 0, fontSize: '.8rem' }}>Working days are Monday to Friday. The start date moves to the Monday of that week.</p>
+      <p className="mute" style={{ margin: 0, fontSize: '.8rem' }}>Sprints start on Monday and count weekdays only.</p>
       <div className="row" style={{ justifyContent: 'flex-end', marginTop: 8 }}>
         <button type="button" onClick={closeModal}>Cancel</button>
-        <button className="primary">{x ? 'Save' : 'Add Program Increment'}</button>
+        <button className="primary">{x ? 'Save' : 'Add'}</button>
       </div>
     </form>
   )
-  if (!x) return <><h2 style={{ marginBottom: 14 }}>Add Program Increment</h2>{form}</>
+  if (!x) return <><h2 style={{ marginBottom: 14 }}>New PI</h2>{form}</>
   const setTab = (k: 'details' | 'off') => update(({ ui }) => { ui.piTab = k })
   return (
     <>
-      <h2 style={{ marginBottom: 12 }}>Edit Program Increment <span className="mute" style={{ fontWeight: 600 }}>{x.name}</span></h2>
+      <h2 style={{ marginBottom: 12 }}>Edit PI <span className="mute" style={{ fontWeight: 600 }}>{x.name}</span></h2>
       <div className="tabs" role="tablist">
         {([['details', 'Details'], ['off', 'Days off']] as const).map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>

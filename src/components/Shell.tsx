@@ -1,15 +1,18 @@
 import { useRef } from 'react'
 import { PALETTES } from '../domain/constants'
 import { migrate, newArt } from '../domain/migrate'
+import { newArts } from '../domain/sync'
 import type { Modal, PI } from '../domain/types'
 import { fmt, piEnd, sd } from '../domain/util'
 import { ask, closeModal, confirmAsk, focusArt, openModal } from '../state/actions'
+import { addTrains, STATUS, useCloud } from '../state/cloud'
 import { artOf, persistedJSON, piOf, update, useApp, useArt, useCurPI, useData, useUI } from '../state/store'
 import { askText } from './askText'
 import { MemberStats, RoleStats } from './Availability'
 import { BrandMark, MenuIcon, PenIcon, ThemeIcon, TrashIcon, XIcon } from './common'
 import { FeatureForm } from './FeatureForm'
 import { CloseX, DoneRow, ModalShell } from './ModalShell'
+import { PlatformsView } from './Platforms'
 import { MemberForm, NewTeamForm, PIForm, RoleEditForm, RolesView, TeamEditor, TeamsView, TypesView } from './settings'
 
 /* ---------- app bar ---------- */
@@ -32,9 +35,9 @@ export function AppBar() {
       <span className="hctx">
         <span className="artm">{a.name}</span>
         {pi ? (
-          <span className="hpi" title={`${fmt(pi.start)} to ${fmt(piEnd(pi))} · ${pi.sprints} sprints`}><b>{pi.name}</b><small>{sd(pi.start)}–{sd(piEnd(pi))}</small></span>
+          <span className="hpi" title={`${fmt(pi.start)} – ${fmt(piEnd(pi))} · ${pi.sprints} sprints`}><b>{pi.name}</b><small>{sd(pi.start)}–{sd(piEnd(pi))}</small></span>
         ) : (
-          <span className="hpi mute"><b>No Program Increment yet</b></span>
+          <span className="hpi mute"><b>No PI yet</b></span>
         )}
       </span>
       <span className="sp" />
@@ -42,7 +45,7 @@ export function AppBar() {
         {pi && (
           <label className="pill team">
             <span>Team</span>
-            <select value={ui.team} onChange={(e) => { const v = e.target.value; update(({ ui }) => { ui.team = v }) }} aria-label="Team you are managing">
+            <select value={ui.team} onChange={(e) => { const v = e.target.value; update(({ ui }) => { ui.team = v }) }} aria-label="Team">
               <option value="all">All teams</option>
               {a.teams.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
             </select>
@@ -70,6 +73,8 @@ export function Nav() {
   const S = useData()
   const ui = useUI()
   const fileRef = useRef<HTMLInputElement>(null)
+  const shared = useCloud((s) => s.enabled)
+  const status = useCloud((s) => s.status)
   if (!ui.menu) return null
   const th = ui.theme || 'system'
   const pal = ui.palette || 'forest'
@@ -95,12 +100,12 @@ export function Nav() {
         <div className="nhd">
           <div className="nbrand">
             <BrandMark className="mark" id="lg" />
-            <div><h2>PI Planner</h2><p>Know what your train can carry.</p></div>
+            <div><h2>PI Planner</h2><p>Plan PIs on real availability</p></div>
           </div>
           <button className="icon" onClick={close} title="Close" aria-label="Close menu" style={{ position: 'absolute', top: 12, right: 12 }}><XIcon /></button>
         </div>
         <div className="nbody">
-          <div className="nsec">Agile Release Trains</div>
+          <div className="nsec">Trains</div>
           {S.arts.map((x) => {
             const isCur = x.id === S.artId
             const pis = [...x.pis].sort((p, q) => p.start.localeCompare(q.start))
@@ -108,8 +113,8 @@ export function Nav() {
               <div key={x.id} className={`ngrp${isCur ? ' cur' : ''}`}>
                 <div className="nart">
                   <span className="nm" title={x.name || 'Unnamed train'}>{x.name || 'Unnamed train'}</span>
-                  <button className="ghost icon" onClick={() => update((d) => { if (d.S.artId !== x.id) { d.S.artId = x.id; d.S.piId = null; d.ui.team = 'all' } d.ui.view = 'setup'; d.ui.menu = false })} title="Edit Agile Release Train" aria-label={`Edit ${x.name}`}><PenIcon /></button>
-                  <button className="ghost icon danger" onClick={() => ask('art', x.id)} title="Delete Agile Release Train" aria-label={`Delete ${x.name}`}><TrashIcon /></button>
+                  <button className="ghost icon" onClick={() => update((d) => { if (d.S.artId !== x.id) { d.S.artId = x.id; d.S.piId = null; d.ui.team = 'all' } d.ui.view = 'setup'; d.ui.menu = false })} title="Edit" aria-label={`Edit ${x.name}`}><PenIcon /></button>
+                  <button className="ghost icon danger" onClick={() => ask('art', x.id)} title="Delete" aria-label={`Delete ${x.name}`}><TrashIcon /></button>
                 </div>
                 <div className="npis">
                   {pis.length ? pis.map((p: PI) => (
@@ -124,11 +129,11 @@ export function Nav() {
                       >
                         <b>{p.name}</b><small>{fmt(p.start)} – {fmt(piEnd(p))} · {p.sprints} sprints</small>
                       </span>
-                      <button className="ghost icon" onClick={() => update((d) => { focusArt(d, x.id, p.id); d.ui.modal = { type: 'pi', id: p.id }; d.ui.piTab = 'details' })} title="Edit Program Increment" aria-label={`Edit ${p.name}`}><PenIcon /></button>
-                      <button className="ghost icon danger" onClick={() => update((d) => { focusArt(d, x.id, p.id); d.ui.modal = { type: 'ask', kind: 'pi', id: p.id, back: null } })} title="Delete Program Increment" aria-label={`Delete ${p.name}`}><TrashIcon /></button>
+                      <button className="ghost icon" onClick={() => update((d) => { focusArt(d, x.id, p.id); d.ui.modal = { type: 'pi', id: p.id }; d.ui.piTab = 'details' })} title="Edit" aria-label={`Edit ${p.name}`}><PenIcon /></button>
+                      <button className="ghost icon danger" onClick={() => update((d) => { focusArt(d, x.id, p.id); d.ui.modal = { type: 'ask', kind: 'pi', id: p.id, back: null } })} title="Delete" aria-label={`Delete ${p.name}`}><TrashIcon /></button>
                     </div>
-                  )) : <p className="nempty">No Program Increments yet.</p>}
-                  <button className="nadd" onClick={() => update((d) => { focusArt(d, x.id, null); d.ui.modal = { type: 'pi', id: 'new' } })}>+ Add Program Increment</button>
+                  )) : <p className="nempty">No PIs yet.</p>}
+                  <button className="nadd" onClick={() => update((d) => { focusArt(d, x.id, null); d.ui.modal = { type: 'pi', id: 'new' } })}>+ Add</button>
                 </div>
               </div>
             )
@@ -146,7 +151,7 @@ export function Nav() {
               ui.wizard = true
             })}
           >
-            + Add Agile Release Train
+            + Add
           </button>
         </div>
         <div className="nftr">
@@ -167,11 +172,11 @@ export function Nav() {
           </div>
           <div className="nsec" style={{ marginTop: 14 }}>Data</div>
           <div className="row" style={{ margin: '6px 0 0' }}>
-            <button onClick={downloadJSON} title="Download everything as a JSON file">Export</button>
-            <button onClick={() => fileRef.current?.click()} title="Replace everything with a JSON file exported earlier">Import</button>
+            <button onClick={downloadJSON} title="Download all data as a file">Export</button>
+            <button onClick={() => fileRef.current?.click()} title={shared ? 'Add the trains in an exported file' : 'Replace all data with an exported file'}>Import</button>
             <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = '' }} />
           </div>
-          <p className="nft" style={{ border: 0, padding: '10px 2px 0', margin: 0 }}>Everything is stored in this browser only. Export to back it up or move it to another browser.</p>
+          <p className="nft" style={{ border: 0, padding: '10px 2px 0', margin: 0 }}>{STATUS[status]}</p>
         </div>
       </nav>
     </>
@@ -184,9 +189,10 @@ export function SetupModal() {
   const a = useArt()
   const ui = useUI()
   const close = () => update(({ ui }) => { ui.view = 'plan' })
-  const tabs = [['general', 'General'], ['roles', 'Roles'], ['teams', 'Teams'], ['ftypes', 'Feature types']] as const
+  const tabs = [['general', 'General'], ['platforms', 'Platforms'], ['roles', 'Roles'], ['teams', 'Teams'], ['ftypes', 'Feature types']] as const
   const body =
-    ui.setupTab === 'teams' ? <TeamsView />
+    ui.setupTab === 'platforms' ? <PlatformsView />
+    : ui.setupTab === 'teams' ? <TeamsView />
     : ui.setupTab === 'roles' ? <RolesView />
     : ui.setupTab === 'ftypes' ? <TypesView />
     : (
@@ -199,18 +205,18 @@ export function SetupModal() {
         <div className="panel">
           <div className="secrow">
             <div>
-              <h3>Delete this Agile Release Train</h3>
-              <span className="mute" style={{ fontSize: '.85rem' }}>Removes its roles, teams, Program Increments and availability.</span>
+              <h3>Delete train</h3>
+              <span className="mute" style={{ fontSize: '.85rem' }}>Removes its teams, roles, PIs and availability.</span>
             </div>
-            <button className="danger acts-b" onClick={() => ask('art', a.id)}><TrashIcon />Delete this train</button>
+            <button className="danger acts-b" onClick={() => ask('art', a.id)}><TrashIcon />Delete</button>
           </div>
         </div>
       </>
     )
   return (
-    <ModalShell wide onClose={close} label="Edit Agile Release Train">
+    <ModalShell wide onClose={close} label="Edit train">
       <div className="head" style={{ marginBottom: 14 }}>
-        <h2>Edit Agile Release Train <span className="mute" style={{ fontWeight: 600 }}>{a.name}</span></h2>
+        <h2>Edit train <span className="mute" style={{ fontWeight: 600 }}>{a.name}</span></h2>
         <button className="icon" onClick={close} title="Close" aria-label="Close"><XIcon size={18} /></button>
       </div>
       <div className="tabs" role="tablist">
@@ -230,6 +236,7 @@ export function ModalView() {
   const S = useData()
   const a = useApp((s) => artOf(s.S))
   const pi = useCurPI()
+  const cloud = useCloud()
   const m = ui.modal
   if (!m || !a) return null
 
@@ -237,13 +244,13 @@ export function ModalView() {
   if (m.type === 'art') {
     inner = (
       <>
-        <h2>Rename Agile Release Train</h2>
-        <div className="row"><input value={a.name} aria-label="Agile Release Train name" autoFocus onChange={(e) => { const v = e.target.value; update(({ S }) => { const x = artOf(S); if (x) x.name = v }) }} /></div>
+        <h2>Rename train</h2>
+        <div className="row"><input value={a.name} aria-label="Train name" autoFocus onChange={(e) => { const v = e.target.value; update(({ S }) => { const x = artOf(S); if (x) x.name = v }) }} /></div>
       </>
     )
   } else if (m.type === 'pi') inner = <PIForm key={m.id} id={m.id} tab={ui.piTab || 'details'} />
   else if (m.type === 'ask') {
-    const [h, txt] = askText(S, a, pi, m.kind, m.id)
+    const [h, txt] = askText(S, a, pi, m.kind, m.id, cloud.enabled)
     inner = (
       <>
         <h2>{h}</h2>
@@ -254,11 +261,30 @@ export function ModalView() {
         </div>
       </>
     )
+  } else if (m.type === 'import' && cloud.enabled && m.payload) {
+    const from = migrate(m.payload).S
+    const n = newArts(S, from).length
+    inner = n ? (
+      <>
+        <h2>Import trains?</h2>
+        <p className="mute">The {n} {n === 1 ? 'train' : 'trains'} in the file {n === 1 ? 'is' : 'are'} added next to the trains already there.</p>
+        <div className="row" style={{ justifyContent: 'flex-end', marginTop: 16 }}>
+          <button onClick={closeModal} autoFocus>Cancel</button>
+          <button className="primary" onClick={() => addTrains(from)}>Import</button>
+        </div>
+      </>
+    ) : (
+      <>
+        <h2>Nothing to import</h2>
+        <p className="mute">The trains in this file are already here.</p>
+        <DoneRow onClose={closeModal} />
+      </>
+    )
   } else if (m.type === 'import') {
     inner = m.payload ? (
       <>
-        <h2>Import data?</h2>
-        <p className="mute">This replaces everything stored in this browser with the {m.arts} Agile Release {m.arts === 1 ? 'Train' : 'Trains'} in the file. Export first if you want to keep what is here now. It can't be undone.</p>
+        <h2>Replace all data?</h2>
+        <p className="mute">Everything in this browser is replaced by the {m.arts} {m.arts === 1 ? 'train' : 'trains'} in the file. This can't be undone.</p>
         <div className="row" style={{ justifyContent: 'flex-end', marginTop: 16 }}>
           <button onClick={closeModal} autoFocus>Cancel</button>
           <button className="primary" style={{ background: 'var(--danger)', borderColor: 'var(--danger)', color: '#fff' }} onClick={() => {
@@ -272,8 +298,8 @@ export function ModalView() {
       </>
     ) : (
       <>
-        <h2>Can't import this file</h2>
-        <p className="mute">It is not a PI Planner export, or it contains no Agile Release Trains.</p>
+        <h2>Can't import file</h2>
+        <p className="mute">This isn't a PI Planner export, or it has no trains.</p>
         <DoneRow onClose={closeModal} />
       </>
     )

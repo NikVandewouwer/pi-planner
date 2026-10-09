@@ -4,6 +4,8 @@ import { openModal } from './state/actions'
 import { PlanningView } from './components/Planning'
 import { AppBar, ModalView, Nav, SetupModal } from './components/Shell'
 import { Wizard } from './components/Wizard'
+import { CloudNotice } from './components/CloudNotice'
+import { useCloud } from './state/cloud'
 import { update, useApp, useArt, useCurPI, useData, useUI } from './state/store'
 
 function PlanView() {
@@ -15,13 +17,13 @@ function PlanView() {
   if (!pi) {
     body = (
       <div className="empty" style={{ padding: '56px 20px' }}>
-        <h2 style={{ marginBottom: 8, color: 'var(--ink)' }}>Add your first Program Increment</h2>
-        <p style={{ margin: '0 0 16px' }}>A Program Increment is the period you plan availability and features for.</p>
-        <button className="primary" onClick={() => openModal({ type: 'pi', id: 'new' })}>Add first Program Increment</button>
+        <h2 style={{ marginBottom: 8, color: 'var(--ink)' }}>No PIs yet</h2>
+        <p style={{ margin: '0 0 16px' }}>A Program Increment (PI) is the period you plan availability and features for.</p>
+        <button className="primary" onClick={() => openModal({ type: 'pi', id: 'new' })}>Add</button>
       </div>
     )
   } else if (!hasMembers) {
-    body = <div className="empty">This train needs a team with members. <button onClick={() => update(({ ui }) => { ui.view = 'setup' })}>Open settings</button></div>
+    body = <div className="empty">Add a team with members to start planning. <button onClick={() => update(({ ui }) => { ui.view = 'setup' })}>Settings</button></div>
   } else body = ui.mainTab === 'planning' ? <PlanningView pi={pi} /> : <CapacityView pi={pi} />
   return (
     <>
@@ -73,7 +75,7 @@ function Footer() {
       {__APP_COMMIT__ && (
         <>
           {' · '}
-          {commitUrl ? <a href={commitUrl} target="_blank" rel="noreferrer" title="Commit this build was made from">{__APP_COMMIT__}</a> : __APP_COMMIT__}
+          {commitUrl ? <a href={commitUrl} target="_blank" rel="noreferrer" title="Build commit">{__APP_COMMIT__}</a> : __APP_COMMIT__}
         </>
       )}
     </footer>
@@ -85,12 +87,16 @@ export default function App() {
   const ui = useUI()
   useTheme()
   useEscape()
+  const loading = useCloud((s) => s.status === 'loading') && !S.done
   const main = S.done && !ui.wizard
   return (
     <>
       <header className="appbar"><div className="in"><AppBar /></div></header>
       <div className="wrap">
-        {main ? (
+        <CloudNotice />
+        {loading ? (
+          <div className="empty" style={{ padding: '56px 20px' }}>Loading…</div>
+        ) : main ? (
           <>
             <PlanView />
             <Nav />

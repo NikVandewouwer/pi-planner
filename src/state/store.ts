@@ -39,10 +39,16 @@ function normalize(d: AppState) {
   if (ui.team !== 'all' && !a.teams.find((x) => x.id === ui.team)) ui.team = 'all'
 }
 
-function load(): AppState {
+/**
+ * Where the data is persisted: STORAGE_KEY when nobody is signed in, or a per-user cache of the
+ * trains in their account (see state/cloud.ts).
+ */
+let storageKey = STORAGE_KEY
+
+function load(key = storageKey): AppState {
   let raw: unknown = null
   try {
-    const s = localStorage.getItem(STORAGE_KEY)
+    const s = localStorage.getItem(key)
     if (s) raw = JSON.parse(s)
   } catch {
     /* unreadable storage: start fresh */
@@ -69,6 +75,16 @@ export const useApp = create<Store>()(
   })),
 )
 
+/** Switch to the data persisted under another key, keeping the appearance settings. */
+export function switchData(key: string) {
+  const { ui } = useApp.getState()
+  storageKey = key
+  const next = load(key)
+  next.ui.theme = ui.theme
+  next.ui.palette = ui.palette
+  useApp.getState().replace(next)
+}
+
 export const update = (recipe: (d: AppState) => void) => useApp.getState().update(recipe)
 
 export function persistedJSON({ S, ui }: AppState) {
@@ -78,7 +94,7 @@ export function persistedJSON({ S, ui }: AppState) {
 useApp.subscribe((st, prev) => {
   if (st.S === prev.S && st.ui === prev.ui) return
   try {
-    localStorage.setItem(STORAGE_KEY, persistedJSON(st))
+    localStorage.setItem(storageKey, persistedJSON(st))
   } catch {
     /* storage full or blocked */
   }

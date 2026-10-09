@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { PLATFORMS } from '../domain/constants'
 import { tvel } from '../domain/model'
 import { initials, n2 } from '../domain/util'
 import { addTeam, ask } from '../state/actions'
 import { artOf, update, useArt, useData, useModel, useUI } from '../state/store'
 import { TrashIcon, TypeTag } from './common'
 import { Err } from './ModalShell'
+import { PlatformsView } from './Platforms'
 import { RolesView, TeamEditor, TypesView } from './settings'
 
 function AddTeamPanel({ autoFocus }: { autoFocus: boolean }) {
@@ -14,26 +14,28 @@ function AddTeamPanel({ autoFocus }: { autoFocus: boolean }) {
     e.preventDefault()
     const input = e.currentTarget.elements.namedItem('name') as HTMLInputElement
     const name = input.value.trim()
-    if (!name) { setErr('Please enter a name.'); input.focus(); return }
+    if (!name) { setErr('Enter a name.'); input.focus(); return }
     update((d) => { addTeam(d, name) })
     input.value = ''
     input.focus()
   }
   return (
     <div className="panel">
-      <div className="fsec">Add a team</div>
+      <div className="fsec">New team</div>
       <form className="row" style={{ alignItems: 'flex-end', marginTop: 10 }} onSubmit={submit}>
         <label className="f grow">Team name
           <input name="name" placeholder="e.g. Vega" autoFocus={autoFocus} className={err ? 'invalid' : ''} onInput={() => setErr(null)} />
           <Err msg={err} />
         </label>
-        <button className="primary">Add team</button>
+        <button className="primary">Add</button>
       </form>
     </div>
   )
 }
 
-/** First-run (and "add train") setup in five steps. */
+const STEPS = 6
+
+/** First-run (and "add train") setup: name, platforms, roles, teams, feature types, review. */
 export function Wizard() {
   const S = useData()
   const ui = useUI()
@@ -48,10 +50,10 @@ export function Wizard() {
     body = (
       <>
         <h2>Name</h2>
-        <p className="help">An Agile Release Train groups all the teams you plan a Program Increment for. You can rename it later.</p>
+        <p className="help">An Agile Release Train groups the teams that plan a Program Increment (PI) together.</p>
         <div className="panel">
           <div className="fsec">Name</div>
-          <label className="f" style={{ marginTop: 10 }}>Name of the train
+          <label className="f" style={{ marginTop: 10 }}>Train name
             <input value={a.name} placeholder="e.g. Checkout" autoFocus onChange={(e) => { const v = e.target.value; update(({ S }) => { const x = artOf(S); if (x) x.name = v }) }} />
           </label>
         </div>
@@ -59,18 +61,21 @@ export function Wizard() {
     )
     next = !!a.name.trim()
   } else if (n === 2) {
+    body = <><h2>Platforms</h2><PlatformsView /></>
+    next = a.platforms.length > 0
+  } else if (n === 3) {
     body = <><h2>Roles</h2><RolesView /></>
     next = a.roles.length > 0
-  } else if (n === 3) {
+  } else if (n === 4) {
     body = (
       <>
-        <h2>Teams and members</h2>
-        <p className="help">Add every team of this train. Each team has its own starting velocity per platform and its own people. You can change all of it later.</p>
+        <h2>Teams</h2>
+        <p className="help">Add the teams of this train and their members.</p>
         {a.teams.map((t) => (
           <div className="panel" key={t.id}>
             <TeamEditor t={t} withMembers flat />
             <div className="row" style={{ justifyContent: 'flex-end', marginTop: 14 }}>
-              <button className="ghost danger" onClick={() => ask('team', t.id)}><TrashIcon />Delete team</button>
+              <button className="ghost danger" onClick={() => ask('team', t.id)}><TrashIcon />Delete</button>
             </div>
           </div>
         ))}
@@ -78,21 +83,34 @@ export function Wizard() {
       </>
     )
     next = a.teams.length > 0 && model.allMembers().length > 0
-  } else if (n === 4) {
+  } else if (n === 5) {
     body = <><h2>Feature types</h2><TypesView /></>
     next = a.ftypes.length > 0
   } else {
     body = (
       <>
-        <h2>Ready to go</h2>
-        <p className="help">A quick check before you start planning. Anything here can be changed later from the menu.</p>
+        <h2>Review</h2>
+        <p className="help">Everything can be changed later from the menu.</p>
         <div className="panel"><div className="fsec">Name</div><div className="artline"><b>{a.name}</b></div></div>
+        <div className="panel">
+          <div className="fsec">Platforms</div>
+          <div className="rbadges">
+            {model.ests.map((est) => {
+              const pls = model.platformsOfEst(est)
+              return (
+                <span key={est} className="rbadge in" title={pls.length > 1 ? 'Each builds the whole feature' : undefined}>
+                  {pls.join(' + ')}<small>{pls.length > 1 ? 'Estimated together' : 'Estimated separately'}</small>
+                </span>
+              )
+            })}
+          </div>
+        </div>
         <div className="panel">
           <div className="fsec">Roles</div>
           <div className="rbadges">
             {model.sortedRoles().map((r) => (
-              <span key={r.id} className={`rbadge ${r.planned ? 'in' : 'out'}${r.planned && !r.platform ? ' warnp' : ''}`} title={r.planned ? 'Included in planning' : 'Excluded from planning'}>
-                {r.name}<small>{r.planned ? (r.platform || 'pick a platform') : ' '}</small>
+              <span key={r.id} className={`rbadge ${r.planned ? 'in' : 'out'}${r.planned && !model.platsOf(r.name).length ? ' warnp' : ''}`} title={r.planned ? 'Included in planning' : 'Excluded from planning'}>
+                {r.name}<small>{r.planned ? (model.platsOf(r.name).join(' + ') || 'No platform') : ' '}</small>
               </span>
             ))}
           </div>
@@ -106,13 +124,13 @@ export function Wizard() {
                   <div>
                     <h4>{tm.name}</h4>
                     <span className="mute" style={{ fontSize: '.82rem' }}>
-                      Velocity {PLATFORMS.map((pl, i) => <span key={pl}>{i > 0 && ' · '}{pl} <b style={{ color: 'var(--ink)' }}>{n2(tvel(tm, pl))} SP</b></span>)} per 100 days
+                      Velocity {model.platforms.map((pl, i) => <span key={pl}>{i > 0 && ' · '}{pl} <b style={{ color: 'var(--ink)' }}>{n2(tvel(tm, pl))} SP</b></span>)} per 100 days
                     </span>
                   </div>
                 </div>
                 <div className="savs">
                   {tm.members.length ? tm.members.map((m) => (
-                    <span key={m.id} className={`sav ${model.isPlanned(m.role) ? 'in' : 'out'}`} title={`${m.role}${model.platOf(m.role) ? ' · ' + model.platOf(m.role) : ''}`}>
+                    <span key={m.id} className={`sav ${model.isPlanned(m.role) ? 'in' : 'out'}`} title={`${m.role}${model.platsOf(m.role).length ? ' · ' + model.platsOf(m.role).join(' + ') : ''}`}>
                       <span className="mav">{initials(m.name)}</span>
                       <span className="tx">{m.name}<small>{m.role}</small></span>
                     </span>
@@ -129,12 +147,12 @@ export function Wizard() {
       </>
     )
     next = true
-    nextLabel = 'Finish setup'
+    nextLabel = 'Finish'
   }
 
   const onNext = () =>
     update(({ S, ui }) => {
-      if (ui.step < 5) { ui.step++; return }
+      if (ui.step < STEPS) { ui.step++; return }
       S.done = true
       S.piId = artOf(S)?.pis[0]?.id ?? null
       ui.wizard = false
@@ -153,9 +171,9 @@ export function Wizard() {
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto' }}>
-      <h1>{S.done ? 'Add Agile Release Train' : 'PI Planner'}</h1>
-      <p className="mute">{S.done ? 'Set it up in five short steps.' : 'Plan Program Increments with real team availability.'}</p>
-      <div className="steps" aria-label={`Step ${n} of 5`}>{[1, 2, 3, 4, 5].map((i) => <span key={i} className={i <= n ? 'on' : ''} />)}</div>
+      <h1>{S.done ? 'New train' : 'PI Planner'}</h1>
+      <p className="mute">{S.done ? 'Set up a train in six steps.' : 'Plan Program Increments on real team availability.'}</p>
+      <div className="steps" aria-label={`Step ${n} of ${STEPS}`}>{Array.from({ length: STEPS }, (_, i) => <span key={i} className={i < n ? 'on' : ''} />)}</div>
       <div style={{ margin: '16px 0' }}>{body}</div>
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <div className="row" style={{ margin: 0 }}>

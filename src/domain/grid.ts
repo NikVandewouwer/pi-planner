@@ -27,14 +27,14 @@ export function gridScope(model: Model, pi: PI, teams: Team[], gfIn: GridFilter 
   const sp = piSprints(pi)
   const roles = model.art.roles.map((r) => r.name).filter((r) => ms.some((m) => m.role === r))
   const groupRoles = roles.filter(
-    (r) => (gf.group === 'all' || (gf.group === 'planned') === model.isPlanned(r)) && (gf.platform === 'all' || model.platOf(r) === gf.platform),
+    (r) => (gf.group === 'all' || (gf.group === 'planned') === model.isPlanned(r)) && (gf.platform === 'all' || model.covers(r, gf.platform)),
   )
   const role = groupRoles.includes(gf.role) ? gf.role : 'all'
   const gsp = gf.sprint !== 'all' && sp[+gf.sprint] ? [sp[+gf.sprint]] : sp
   const days = gsp.flat()
   const passes = (m: Member) =>
     (gf.group === 'all' || (gf.group === 'planned') === model.isPlanned(m.role)) &&
-    (gf.platform === 'all' || model.platOf(m.role) === gf.platform) &&
+    (gf.platform === 'all' || model.covers(m.role, gf.platform)) &&
     (role === 'all' || m.role === role) &&
     (!gf.absent || model.sum(m.id, days) < model.work(m.id, days))
   const filtered = gf.group !== 'all' || gf.platform !== 'all' || role !== 'all' || gf.sprint !== 'all' || gf.absent

@@ -2,7 +2,7 @@ import { VALS } from '../domain/constants'
 import { gridScope } from '../domain/grid'
 import { emptyData, defaultUI } from '../domain/migrate'
 import { Model } from '../domain/model'
-import type { DeleteKind, Modal } from '../domain/types'
+import type { Art, DeleteKind, Modal } from '../domain/types'
 import { piSprints, uid } from '../domain/util'
 import { artOf, piOf, scopeTeamsOf, update, type AppState } from './store'
 
@@ -47,6 +47,109 @@ export const paintCell = (mid: string, date: string) =>
     ;(S.avail[mid] = S.avail[mid] || {})[date] = v
   })
 
+/* ---------- platforms ---------- */
+
+const same = (x: string, y: string) => x.trim().toLowerCase() === y.trim().toLowerCase()
+
+/** Drop platforms and estimates a feature no longer has (after platforms changed). */
+function pruneFeatures(a: Art) {
+  const estOf = new Map(a.platforms.map((p) => [p.name, p.est]))
+  a.pis.forEach((p) => p.features.forEach((f) => {
+    f.platforms = f.platforms.filter((pl) => estOf.has(pl))
+    const used = new Set(f.platforms.map((pl) => estOf.get(pl)))
+    for (const k of ['pts', 'del'] as const) Object.keys(f[k] || {}).forEach((e) => { if (!used.has(e)) delete f[k][e] })
+  }))
+}
+
+/** A fresh estimate key for a platform estimated on its own. */
+const ownEst = (a: Art, name: string) => (a.platforms.some((p) => p.est === name) ? uid() : name)
+
+/**
+ * Adds a platform, estimated on its own or together with an existing platform (e.g. Android
+ * together with iOS). Returns an error message, or null when added.
+ */
+export function addPlatform(a: Art, name: string, withId: string | null = null): string | null {
+  name = name.trim()
+  if (!name) return 'Please enter a name.'
+  if (a.platforms.some((p) => same(p.name, name))) return `“${name}” already exists.`
+  const partner = withId ? a.platforms.find((p) => p.id === withId) : undefined
+  const est = partner ? partner.est : ownEst(a, name)
+  // keep platforms that are estimated together next to each other: iOS, Android, Backend
+  const last = a.platforms.map((p) => p.est).lastIndexOf(est)
+  a.platforms.splice(last < 0 ? a.platforms.length : last + 1, 0, { id: uid(), name, est })
+  a.teams.forEach((t) => { if (t.velocity[name] == null) t.velocity[name] = 30 })
+  return null
+}
+
+/** Estimate a platform together with another one, or on its own (withId null). */
+export function linkPlatform(a: Art, id: string, withId: string | null) {
+  const p = a.platforms.find((x) => x.id === id)
+  if (!p) return
+  if (withId) {
+    const partner = a.platforms.find((x) => x.id === withId)
+    if (partner && partner !== p) setPlatformEst(a, id, partner.est)
+  } else if (a.platforms.some((x) => x !== p && x.est === p.est)) {
+    setPlatformEst(a, id, ownEst(a, p.name))
+  }
+  // keep linked platforms together in the list
+  const order = a.platforms.filter((x) => x !== p)
+  const last = order.map((x) => x.est).lastIndexOf(p.est)
+  if (last >= 0) { order.splice(last + 1, 0, p); a.platforms = order }
+}
+
+/** Renames a platform everywhere it is referenced. Returns an error message, or null. */
+export function renamePlatform(a: Art, id: string, name: string): string | null {
+  name = name.trim()
+  const p = a.platforms.find((x) => x.id === id)
+  if (!p || name === p.name) return null
+  if (!name) return 'Please enter a name.'
+  if (a.platforms.some((x) => x !== p && same(x.name, name))) return `“${name}” already exists.`
+  const old = p.name
+  a.roles.forEach((r) => { r.platforms = r.platforms.map((x) => (x === old ? name : x)) })
+  a.teams.forEach((t) => {
+    if (t.velocity[old] != null) { t.velocity[name] = t.velocity[old]; delete t.velocity[old] }
+  })
+  a.pis.forEach((pi) => pi.features.forEach((f) => { f.platforms = f.platforms.map((x) => (x === old ? name : x)) }))
+  p.name = name
+  return null
+}
+
+/**
+ * Moves a platform to another estimate. Features it builds keep their points: they are
+ * copied to the new estimate when that one has none yet. Estimates nobody uses any more are dropped.
+ */
+export function setPlatformEst(a: Art, id: string, est: string) {
+  const p = a.platforms.find((x) => x.id === id)
+  est = est.trim()
+  if (!p || !est || est === p.est) return
+  const old = p.est
+  a.pis.forEach((pi) => pi.features.forEach((f) => {
+    if (!f.platforms.includes(p.name)) return
+    for (const k of ['pts', 'del'] as const) if (f[k][est] == null && f[k][old] != null) f[k][est] = f[k][old]
+  }))
+  p.est = est
+  pruneFeatures(a)
+}
+
+/** Features in this train that are sized in the platform's estimate but don't list the platform yet. */
+export function missingFromEst(a: Art, id: string) {
+  const p = a.platforms.find((x) => x.id === id)
+  if (!p) return []
+  const others = new Set(a.platforms.filter((x) => x !== p && x.est === p.est).map((x) => x.name))
+  return a.pis.flatMap((pi) => pi.features).filter((f) => !f.platforms.includes(p.name) && f.platforms.some((pl) => others.has(pl)))
+}
+
+/** Lets a platform build every existing ticket of its estimate in parallel, e.g. Android joining iOS on Mobile. */
+export function addToFeaturesOfEst(a: Art, id: string) {
+  const p = a.platforms.find((x) => x.id === id)
+  if (!p) return
+  const order = a.platforms.map((x) => x.name)
+  const ids = new Set(missingFromEst(a, id).map((f) => f.id))
+  a.pis.forEach((pi) => pi.features.forEach((f) => {
+    if (ids.has(f.id)) f.platforms = order.filter((pl) => pl === p.name || f.platforms.includes(pl))
+  }))
+}
+
 /* ---------- deleting ---------- */
 
 export function doDelete(d: AppState, kind: DeleteKind, id: string) {
@@ -58,7 +161,15 @@ export function doDelete(d: AppState, kind: DeleteKind, id: string) {
     return
   }
   if (!a) return
-  if (kind === 'team') {
+  if (kind === 'platform') {
+    const p = a.platforms.find((x) => x.id === id)
+    if (p) {
+      a.platforms = a.platforms.filter((x) => x !== p)
+      a.roles.forEach((r) => { r.platforms = r.platforms.filter((x) => x !== p.name) })
+      a.teams.forEach((t) => delete t.velocity[p.name])
+      pruneFeatures(a)
+    }
+  } else if (kind === 'team') {
     const tm = a.teams.find((x) => x.id === id)
     if (tm) {
       tm.members.forEach((m) => delete S.avail[m.id])
@@ -118,6 +229,6 @@ export const confirmAsk = () =>
 export const addTeam = (d: AppState, name: string) => {
   const a = artOf(d.S)
   const id = uid()
-  a?.teams.push({ id, name, members: [], velocity: { Frontend: 30, Backend: 30 } })
+  a?.teams.push({ id, name, members: [], velocity: Object.fromEntries(a.platforms.map((p) => [p.name, 30])) })
   return id
 }
